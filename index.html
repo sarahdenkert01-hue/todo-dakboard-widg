@@ -326,6 +326,40 @@
             .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, loadData)
             .subscribe();
+
+// 1. Monitor for due dates every 30 seconds
+setInterval(() => {
+    const now = new Date();
+    tasks.forEach(task => {
+        // Only alert if task has a due date, isn't done, and hasn't notified yet
+        if (task.due_at && !task.completed && !task.notified) {
+            const due = new Date(task.due_at);
+            if (now >= due) {
+                playAlertTone();
+                task.notified = true; // Prevents the tone from repeating
+                console.log("Alarm triggered for: " + task.text);
+            }
+        }
+    });
+}, 30000);
+
+// 2. The Sound Function
+function playAlertTone() {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.play().catch(e => {
+        console.log("Audio blocked: Interaction needed once per session.");
+    });
+}
+
+// 3. The Function to set the time
+async function handleSetReminder(taskId) {
+    const time = prompt("Enter reminder (Format: YYYY-MM-DD HH:MM)", "2025-12-18 14:00");
+    if (time) {
+        const isoTime = new Date(time).toISOString();
+        await supabaseClient.from('tasks').update({ due_at: isoTime }).eq('id', taskId);
+        loadData();
+    }
+}         
     </script>
 </body>
 </html>
