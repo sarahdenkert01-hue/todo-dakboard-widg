@@ -9,46 +9,30 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { background: transparent; font-family: 'Comfortaa', cursive; padding: 10px; color: white; overflow: visible; }
-        
-        .add-list-section { margin-bottom: 20px; display: flex; gap: 8px; opacity: 0.3; transition: opacity 0.3s; }
-        .add-list-section:hover { opacity: 1; }
-        .add-list-input { padding: 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: white; font-family: inherit; }
-        .add-list-btn { padding: 5px 10px; border-radius: 4px; border: none; background: rgba(255,255,255,0.2); color: white; cursor: pointer; }
-
-        .list-container {
-            position: absolute;
-            width: 250px;
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 10px;
-            cursor: move;
-        }
-        
-        .list-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; }
-        .delete-list-btn { font-size: 10px; background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; }
-        
-        .task-input { width: 80%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2); color: white; font-size: 12px; outline: none; }
-        .tasks { margin-top: 10px; }
-        .task { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; font-size: 13px; }
-        .checkbox { width: 14px; height: 14px; border: 2px solid white; border-radius: 50%; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
-        .checkbox.checked { background: white; position: relative; }
-        .checkbox.checked::after { content: '✓'; color: black; font-size: 10px; position: absolute; top: -2px; left: 2px; }
+        .add-list-section { margin-bottom: 20px; display: flex; gap: 8px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; width: fit-content; }
+        .add-list-input { padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.4); color: white; font-family: inherit; }
+        .add-list-btn { padding: 8px 15px; border-radius: 4px; border: none; background: #4a90e2; color: white; cursor: pointer; font-weight: bold; }
+        .list-container { position: absolute; width: 250px; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px; cursor: move; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+        .list-title { font-size: 16px; font-weight: 700; color: #fff; }
+        .delete-list-btn { font-size: 14px; background: none; border: none; color: #ff5f56; cursor: pointer; padding: 5px; }
+        .task-input { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; padding: 8px; font-size: 13px; outline: none; margin-bottom: 10px; }
+        .task { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 4px; }
+        .checkbox { width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
+        .checkbox.checked { background: #4cd964; border-color: #4cd964; position: relative; }
+        .checkbox.checked::after { content: '✓'; color: white; font-size: 12px; position: absolute; top: -1px; left: 3px; }
         .task.completed .task-text { text-decoration: line-through; opacity: 0.5; }
-        
-        .subtasks { margin-left: 20px; font-size: 11px; opacity: 0.8; }
-        .resize-handle { position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; cursor: nwse-resize; }
     </style>
 </head>
 <body>
     <div class="add-list-section">
-        <input type="text" id="newListInput" class="add-list-input" placeholder="New list name...">
-        <button class="add-list-btn" onclick="addList()">Add List</button>
+        <input type="text" id="newListInput" class="add-list-input" placeholder="Name your list...">
+        <button class="add-list-btn" id="mainAddBtn">Add List</button>
     </div>
     <div id="listsContainer"></div>
 
     <script>
+        console.log("System Initializing...");
         const SUPABASE_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -56,54 +40,82 @@
         let lists = [];
         let tasks = {};
 
-        // Subscribe to Realtime
-        supabase.channel('custom-all-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, () => loadData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => loadData())
-            .subscribe();
+        // Event Listeners for the buttons
+        document.getElementById('mainAddBtn').addEventListener('click', addList);
 
         async function loadData() {
-            const { data: listData } = await supabase.from('lists').select('*').order('position');
-            const { data: taskData } = await supabase.from('tasks').select('*').order('position');
-            
-            lists = listData || [];
-            tasks = {};
-            lists.forEach(l => tasks[l.id] = taskData.filter(t => t.list_id === l.id));
-            render();
+            try {
+                const { data: listData, error: lErr } = await supabase.from('lists').select('*').order('position');
+                const { data: taskData, error: tErr } = await supabase.from('tasks').select('*').order('position');
+                
+                if (lErr || tErr) throw (lErr || tErr);
+
+                lists = listData || [];
+                tasks = {};
+                lists.forEach(l => tasks[l.id] = taskData.filter(t => t.list_id === l.id));
+                render();
+            } catch (e) { console.error("Load Error:", e); }
         }
 
+        // Realtime
+        supabase.channel('dakboard-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, loadData)
+            .subscribe();
+
         async function addList() {
-            const name = document.getElementById('newListInput').value;
+            const input = document.getElementById('newListInput');
+            const name = input.value.trim();
             if (!name) return;
-            const { error } = await supabase.from('lists').insert([{ name, x_position: 50, y_position: 100, width: 250 }]);
-            if (error) alert("Error adding list: " + error.message);
-            document.getElementById('newListInput').value = '';
+
+            console.log("Adding:", name);
+            const { error } = await supabase.from('lists').insert([{ 
+                name: name, 
+                x_position: 50, 
+                y_position: 120, 
+                width: 250,
+                position: lists.length 
+            }]);
+
+            if (error) {
+                alert("Database Error: " + error.message);
+            } else {
+                input.value = '';
+                loadData();
+            }
         }
 
         async function addTask(listId) {
             const input = document.getElementById(`input-${listId}`);
-            if (!input.value) return;
-            await supabase.from('tasks').insert([{ list_id: listId, text: input.value, completed: false }]);
+            if (!input.value.trim()) return;
+            const { error } = await supabase.from('tasks').insert([{ list_id: listId, text: input.value, completed: false }]);
+            if (error) alert(error.message);
             input.value = '';
+            loadData();
         }
 
         async function toggleTask(id, current) {
             await supabase.from('tasks').update({ completed: !current }).eq('id', id);
+            loadData();
         }
 
         async function deleteList(id) {
-            if(confirm("Delete list?")) await supabase.from('lists').delete().eq('id', id);
+            if(confirm("Delete this list?")) {
+                await supabase.from('tasks').delete().eq('list_id', id);
+                await supabase.from('lists').delete().eq('id', id);
+                loadData();
+            }
         }
 
         function render() {
             const container = document.getElementById('listsContainer');
             container.innerHTML = lists.map(list => `
-                <div class="list-container" style="left:${list.x_position}px; top:${list.y_position}px; width:${list.width}px" onmouseup="savePos(event, ${list.id}, this)">
-                    <div class="list-title">
-                        ${list.name}
+                <div class="list-container" style="left:${list.x_position}px; top:${list.y_position}px; width:${list.width}px" id="list-${list.id}">
+                    <div class="list-header">
+                        <span class="list-title">${list.name}</span>
                         <button class="delete-list-btn" onclick="deleteList(${list.id})">✕</button>
                     </div>
-                    <input type="text" id="input-${list.id}" class="task-input" placeholder="+" onkeypress="if(event.key==='Enter') addTask(${list.id})">
+                    <input type="text" id="input-${list.id}" class="task-input" placeholder="+ Add Task" onkeypress="if(event.key==='Enter') addTask(${list.id})">
                     <div class="tasks">
                         ${(tasks[list.id] || []).map(t => `
                             <div class="task ${t.completed ? 'completed' : ''}">
@@ -115,26 +127,10 @@
                 </div>
             `).join('');
             
-            // Re-apply simple drag logic
+            setupDragging();
+        }
+
+        function setupDragging() {
             document.querySelectorAll('.list-container').forEach(el => {
                 el.onmousedown = (e) => {
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
-                    let shiftX = e.clientX - el.getBoundingClientRect().left;
-                    let shiftY = e.clientY - el.getBoundingClientRect().top;
-                    document.onmousemove = (e) => {
-                        el.style.left = e.pageX - shiftX + 'px';
-                        el.style.top = e.pageY - shiftY + 'px';
-                    };
-                    document.onmouseup = () => { document.onmousemove = null; };
-                };
-            });
-        }
-
-        async function savePos(e, id, el) {
-            await supabase.from('lists').update({ x_position: parseInt(el.style.left), y_position: parseInt(el.style.top) }).eq('id', id);
-        }
-
-        loadData();
-    </script>
-</body>
-</html>
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON
