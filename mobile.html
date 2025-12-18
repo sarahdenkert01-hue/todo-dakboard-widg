@@ -3,101 +3,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iPhone To-Do</title>
-    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>iPhone To-Do Sync</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body { 
             font-family: 'Comfortaa', cursive; 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; padding: 15px; min-height: 100vh;
+            color: white; 
+            padding: 15px; 
+            min-height: 100vh;
         }
-        .add-list-section { background: rgba(255,255,255,0.15); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 10px; }
-        .add-list-input { flex: 1; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 10px; color: white; outline: none; }
-        .add-list-btn { background: white; color: #764ba2; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; }
 
-        .list-container { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        /* Mobile Add List Section */
+        .add-list-section { 
+            background: rgba(255,255,255,0.15); 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            display: flex; 
+            gap: 10px; 
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .add-list-input { 
+            flex: 1; 
+            background: rgba(0,0,0,0.2); 
+            border: 1px solid rgba(255,255,255,0.3); 
+            border-radius: 8px; 
+            padding: 12px; 
+            color: white; 
+            outline: none; 
+            font-size: 16px; 
+        }
+        .add-list-btn { 
+            background: #fff; 
+            color: #764ba2; 
+            border: none; 
+            padding: 0 15px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-family: inherit;
+        }
+
+        /* Mobile List Cards */
+        .list-container { 
+            background: rgba(255,255,255,0.1); 
+            border-radius: 15px; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            backdrop-filter: blur(5px);
+        }
         .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .list-title { font-size: 18px; font-weight: 700; }
+        .delete-list-btn { color: #ff5f56; font-size: 18px; border: none; background: none; padding: 5px; }
         
-        .task-input-row { display: flex; gap: 8px; margin-bottom: 15px; }
-        .task-input { flex: 1; background: transparent; border: none; border-bottom: 2px solid rgba(255,255,255,0.3); color: white; padding: 5px; font-size: 16px; outline: none; }
+        /* Task Input */
+        .task-input { 
+            width: 100%; 
+            background: rgba(0,0,0,0.2); 
+            border: 1px solid rgba(255,255,255,0.2); 
+            border-radius: 8px; 
+            color: white; 
+            padding: 14px; 
+            font-size: 16px; 
+            outline: none; 
+            margin-bottom: 15px; 
+            font-family: inherit;
+        }
         
-        .task { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .checkbox { width: 24px; height: 24px; border: 2px solid white; border-radius: 50%; flex-shrink: 0; }
-        .checkbox.checked { background: white; display: flex; align-items: center; justify-content: center; }
-        .checkbox.checked::after { content: '✓'; color: #764ba2; font-weight: bold; }
+        /* Task Rows */
+        .task { 
+            display: flex; 
+            flex-direction: column; 
+            padding: 12px 0; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+        }
+        .task-main { display: flex; align-items: center; gap: 12px; }
+        .task-text { font-size: 16px; flex: 1; line-height: 1.4; }
         .task.completed .task-text { text-decoration: line-through; opacity: 0.5; }
-        .task-text { font-size: 16px; }
+
+        /* Checkboxes */
+        .checkbox { 
+            width: 26px; 
+            height: 26px; 
+            border: 2px solid white; 
+            border-radius: 50%; 
+            flex-shrink: 0; 
+        }
+        .checkbox.checked { 
+            background: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .checkbox.checked::after { 
+            content: '✓'; 
+            color: #764ba2; 
+            font-weight: bold; 
+            font-size: 16px; 
+        }
+
+        /* Subtasks */
+        .subtasks { 
+            margin-left: 38px; 
+            margin-top: 10px; 
+            border-left: 2px solid rgba(255,255,255,0.1); 
+            padding-left: 12px; 
+        }
+        .subtask { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .sub-checkbox { 
+            width: 18px; 
+            height: 18px; 
+            border: 1px solid white; 
+            border-radius: 50%; 
+        }
+        .sub-checkbox.checked { background: white; }
+        .add-sub-btn { 
+            background: rgba(255,255,255,0.15); 
+            border: none; 
+            color: white; 
+            font-size: 20px; 
+            border-radius: 6px; 
+            width: 30px; 
+            height: 30px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
+
     <div class="add-list-section">
-        <input type="text" id="newListInput" class="add-list-input" placeholder="New List Name...">
-        <button class="add-list-btn" onclick="addList()">Add</button>
+        <input type="text" id="newListInput" class="add-list-input" placeholder="New List...">
+        <button class="add-list-btn" id="save-list-trigger">Add</button>
     </div>
-    <div id="listsContainer"></div>
+
+    <div id="listsArea"></div>
 
     <script>
-        const SUPABASE_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Initialize Supabase safely for mobile
+        if (typeof supabaseClient === 'undefined') {
+            const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
+            const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
+            var supabaseClient = window.supabase.createClient(S_URL, S_KEY);
+        }
+
+        let lists = [];
+        let tasks = [];
 
         async function loadData() {
-            const { data: listData } = await supabase.from('lists').select('*').order('position');
-            const { data: taskData } = await supabase.from('tasks').select('*').order('position');
-            render(listData || [], taskData || []);
+            try {
+                const { data: lData } = await supabaseClient.from('lists').select('*').order('id');
+                const { data: tData } = await supabaseClient.from('tasks').select('*').order('position');
+                lists = lData || [];
+                tasks = tData || [];
+                render();
+            } catch (e) { console.error("Sync Error", e); }
         }
 
-        // Realtime sync
-        supabase.channel('mobile-sync').on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, loadData).subscribe();
+        // --- MOBILE ACTIONS ---
+        document.getElementById('save-list-trigger').onclick = async () => {
+            const input = document.getElementById('newListInput');
+            if (!input.value.trim()) return;
+            await supabaseClient.from('lists').insert([{ 
+                name: input.value.trim(), 
+                x_position: 50, 
+                y_position: 50, 
+                width: 250 
+            }]);
+            input.value = "";
+            loadData();
+        };
 
-        // Refresh when iPhone switches back to tab
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(); });
-
-        async function addList() {
-            const val = document.getElementById('newListInput').value;
-            if (!val) return;
-            const { error } = await supabase.from('lists').insert([{ name: val, position: 0, x_position: 50, y_position: 50 }]);
-            if (error) alert(error.message);
-            document.getElementById('newListInput').value = '';
+        async function handleAddTask(listId, event) {
+            if (event.key === 'Enter' && event.target.value) {
+                await supabaseClient.from('tasks').insert([{ list_id: listId, text: event.target.value, subtasks: [] }]);
+                event.target.value = "";
+                loadData();
+            }
         }
 
-        async function addTask(listId) {
-            const input = document.getElementById(`input-${listId}`);
-            if (!input.value) return;
-            await supabase.from('tasks').insert([{ list_id: listId, text: input.value }]);
-            input.value = '';
+        async function handleToggleTask(taskId, currentStatus) {
+            await supabaseClient.from('tasks').update({ completed: !currentStatus }).eq('id', taskId);
+            loadData();
         }
 
-        async function toggleTask(id, current) {
-            await supabase.from('tasks').update({ completed: !current }).eq('id', id);
+        async function handleAddSubtask(taskId) {
+            const text = prompt("New subtask:");
+            if (!text) return;
+            const task = tasks.find(t => t.id === taskId);
+            const updated = [...(task.subtasks || []), { id: Date.now(), text, completed: false }];
+            await supabaseClient.from('tasks').update({ subtasks: updated }).eq('id', taskId);
+            loadData();
         }
 
-        function render(lists, tasks) {
-            const container = document.getElementById('listsContainer');
-            container.innerHTML = lists.map(list => `
+        async function handleToggleSubtask(taskId, subId) {
+            const task = tasks.find(t => t.id === taskId);
+            const updated = task.subtasks.map(s => s.id === subId ? { ...s, completed: !s.completed } : s);
+            await supabaseClient.from('tasks').update({ subtasks: updated }).eq('id', taskId);
+            loadData();
+        }
+
+        async function handleDeleteList(id) {
+            if (confirm("Delete list and all tasks?")) {
+                await supabaseClient.from('tasks').delete().eq('list_id', id);
+                await supabaseClient.from('lists').delete().eq('id', id);
+                loadData();
+            }
+        }
+
+        // --- MOBILE RENDER ---
+        function render() {
+            const area = document.getElementById('listsArea');
+            area.innerHTML = lists.map(l => {
+                const listTasks = tasks.filter(t => t.list_id === l.id);
+                return `
                 <div class="list-container">
-                    <div class="list-header"><div class="list-title">${list.name}</div></div>
-                    <div class="task-input-row">
-                        <input type="text" id="input-${list.id}" class="task-input" placeholder="Add task...">
-                        <button class="add-list-btn" onclick="addTask(${list.id})">+</button>
+                    <div class="list-header">
+                        <span class="list-title">${l.name}</span>
+                        <button class="delete-list-btn" onclick="handleDeleteList(${l.id})">✕</button>
                     </div>
+                    <input type="text" class="task-input" placeholder="+ Add task" onkeypress="handleAddTask(${l.id}, event)">
                     <div>
-                        ${tasks.filter(t => t.list_id === list.id).map(t => `
-                            <div class="task ${t.completed ? 'completed' : ''}" onclick="toggleTask(${t.id}, ${t.completed})">
-                                <div class="checkbox ${t.completed ? 'checked' : ''}"></div>
-                                <div class="task-text">${t.text}</div>
+                        ${listTasks.map(t => `
+                            <div class="task ${t.completed ? 'completed' : ''}">
+                                <div class="task-main">
+                                    <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="handleToggleTask(${t.id}, ${t.completed})"></div>
+                                    <span class="task-text">${t.text}</span>
+                                    <button class="add-sub-btn" onclick="handleAddSubtask(${t.id})">+</button>
+                                </div>
+                                <div class="subtasks">
+                                    ${(t.subtasks || []).map(s => `
+                                        <div class="subtask ${s.completed ? 'completed' : ''}">
+                                            <div class="sub-checkbox ${s.completed ? 'checked' : ''}" onclick="handleToggleSubtask(${t.id}, ${s.id})"></div>
+                                            <span style="font-size:14px;">${s.text}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
                             </div>
                         `).join('')}
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
+        // Refresh when iPhone switches back to Safari tab
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(); });
+
         loadData();
+
+        // Realtime Sync
+        supabaseClient.channel('mobile-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, loadData)
+            .subscribe();
     </script>
 </body>
 </html>
