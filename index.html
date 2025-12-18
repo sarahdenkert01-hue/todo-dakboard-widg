@@ -1,1006 +1,140 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>To-Do List</title>
+    <title>Dakboard To-Do</title>
     <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Comfortaa', cursive;
-            background: transparent;
-            padding: 5px;
-            overflow: visible;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { background: transparent; font-family: 'Comfortaa', cursive; padding: 10px; color: white; overflow: visible; }
         
-        html {
-            background: transparent;
-        }
-
-        .container {
-            max-width: 90%;
-            margin: 0;
-            padding: 0;
-        }
-
-        .add-list-section {
-            margin-bottom: 12px;
-            display: flex;
-            gap: 5px;
-            align-items: center;
-        }
-
-        .add-list-input {
-            flex: 1;
-            padding: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            font-size: 10px;
-            font-family: 'Comfortaa', cursive;
-            outline: none;
-        }
-
-        .add-list-input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .add-list-btn {
-            padding: 3px 8px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            font-size: 10px;
-            cursor: pointer;
-            font-family: 'Comfortaa', cursive;
-        }
-
-        .lists-container {
-            position: relative;
-            min-height: 100vh;
-            width: 100%;
-        }
+        .add-list-section { margin-bottom: 20px; display: flex; gap: 8px; opacity: 0.3; transition: opacity 0.3s; }
+        .add-list-section:hover { opacity: 1; }
+        .add-list-input { padding: 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: white; font-family: inherit; }
+        .add-list-btn { padding: 5px 10px; border-radius: 4px; border: none; background: rgba(255,255,255,0.2); color: white; cursor: pointer; }
 
         .list-container {
             position: absolute;
-            width: 150px;
-            min-width: 150px;
-            max-width: 400px;
-            margin-bottom: 0;
-            cursor: move;
-            padding: 3px;
-            border-radius: 3px;
+            width: 250px;
             background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            resize: horizontal;
-            overflow: auto;
-        }
-
-        .list-container:hover {
-            background: rgba(0, 0, 0, 0.4);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .list-container.dragging-list {
-            opacity: 0.7;
-            z-index: 1000;
-            resize: none;
-        }
-
-        .resize-handle {
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 5px;
-            cursor: ew-resize;
-            background: rgba(255, 255, 255, 0.2);
-            border-left: 2px solid rgba(255, 255, 255, 0.3);
-            z-index: 10;
-        }
-
-        .resize-handle:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .list-container.resizing {
-            cursor: ew-resize;
-        }
-
-        .list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-
-        .list-title {
-            font-size: 13px;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
-        .delete-list-btn {
-            padding: 1px 5px;
-            border: none;
-            background: transparent;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 9px;
-            cursor: pointer;
-        }
-
-        .delete-list-btn:hover {
-            color: #ffffff;
-        }
-
-        .add-task-form {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 8px;
-        }
-
-        .task-input {
-            flex: 1;
-            padding: 4px 3px;
-            border: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-            background: transparent;
-            color: #ffffff;
-            font-size: 12px;
-            font-family: 'Comfortaa', cursive;
-            outline: none;
-        }
-
-        .task-input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .add-btn {
-            padding: 3px 8px;
-            border: none;
-            background: transparent;
-            color: #ffffff;
-            font-size: 12px;
-            cursor: pointer;
-            font-weight: 300;
-        }
-
-        .tasks {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            min-height: 50px;
-        }
-
-        .task {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            cursor: move;
-            padding: 2px 0;
-        }
-
-        .task-main {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .task.dragging {
-            opacity: 0.3;
-        }
-
-        .checkbox {
-            width: 14px;
-            height: 14px;
-            min-width: 14px;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .checkbox.checked::after {
-            content: '✓';
-            color: #ffffff;
-            font-size: 9px;
-            font-weight: bold;
-        }
-
-        .task-text {
-            flex: 1;
-            font-size: 12px;
-            color: #ffffff;
-            word-break: break-word;
-            line-height: 1.3;
-        }
-
-        .task.completed .task-text {
-            text-decoration: line-through;
-            opacity: 0.4;
-        }
-
-        .task-actions {
-            display: flex;
-            gap: 3px;
-        }
-
-        .add-subtask-btn, .delete-btn {
-            padding: 1px 4px;
-            border: none;
-            background: transparent;
-            color: #ffffff;
-            font-size: 11px;
-            cursor: pointer;
-            opacity: 0.7;
-        }
-
-        .add-subtask-btn:hover, .delete-btn:hover {
-            opacity: 1;
-        }
-
-        .subtasks {
-            margin-left: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        .subtask {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding: 1px 0;
-        }
-
-        .subtask .checkbox {
-            width: 10px;
-            height: 10px;
-            min-width: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-        }
-
-        .subtask .checkbox.checked::after {
-            font-size: 7px;
-        }
-
-        .subtask .task-text {
-            font-size: 9px;
-            opacity: 0.9;
-        }
-
-        .subtask.completed .task-text {
-            text-decoration: line-through;
-            opacity: 0.4;
-        }
-
-        .subtask .delete-btn {
-            font-size: 10px;
-        }
-
-        .subtask-input-container {
-            margin-left: 20px;
-            display: flex;
-            gap: 4px;
-            margin-top: 3px;
-        }
-
-        .subtask-input {
-            flex: 1;
-            padding: 3px;
-            border: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-            background: transparent;
-            color: #ffffff;
-            font-size: 11px;
-            font-family: 'Comfortaa', cursive;
-            outline: none;
-        }
-
-        .subtask-input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        .subtask-add-btn {
-            padding: 1px 6px;
-            border: none;
-            background: transparent;
-            color: #ffffff;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .loading {
-            color: rgba(255, 255, 255, 0.6);
-            text-align: center;
-            font-size: 10px;
+            border-radius: 8px;
             padding: 10px;
+            cursor: move;
         }
+        
+        .list-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .delete-list-btn { font-size: 10px; background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; }
+        
+        .task-input { width: 80%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2); color: white; font-size: 12px; outline: none; }
+        .tasks { margin-top: 10px; }
+        .task { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+        .checkbox { width: 14px; height: 14px; border: 2px solid white; border-radius: 50%; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
+        .checkbox.checked { background: white; position: relative; }
+        .checkbox.checked::after { content: '✓'; color: black; font-size: 10px; position: absolute; top: -2px; left: 2px; }
+        .task.completed .task-text { text-decoration: line-through; opacity: 0.5; }
+        
+        .subtasks { margin-left: 20px; font-size: 11px; opacity: 0.8; }
+        .resize-handle { position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; cursor: nwse-resize; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="add-list-section">
-            <input type="text" class="add-list-input" id="newListInput" placeholder="New list name...">
-            <button class="add-list-btn" onclick="addList()">Add List</button>
-        </div>
-        <div class="lists-container" id="listsContainer">
-            <div class="loading">Loading...</div>
-        </div>
+    <div class="add-list-section">
+        <input type="text" id="newListInput" class="add-list-input" placeholder="New list name...">
+        <button class="add-list-btn" onclick="addList()">Add List</button>
     </div>
+    <div id="listsContainer"></div>
 
     <script>
-        // ⚠️ REPLACE THESE WITH YOUR SUPABASE CREDENTIALS
         const SUPABASE_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
-
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let lists = [];
         let tasks = {};
-        let draggedTask = null;
-        let draggedFrom = null;
-        let draggedList = null;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
-        let resizingList = null;
-        let resizeStartX = 0;
-        let resizeStartWidth = 0;
 
-        // Set up real-time subscription for tasks
-        const tasksChannel = supabase
-            .channel('tasks-changes')
-            .on('postgres_changes', 
-                { event: '*', schema: 'public', table: 'tasks' },
-                (payload) => {
-                    console.log('Task change detected:', payload);
-                    loadTasks();
-                }
-            )
+        // Subscribe to Realtime
+        supabase.channel('custom-all-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, () => loadData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => loadData())
             .subscribe();
 
-        // Set up real-time subscription for lists
-        const listsChannel = supabase
-            .channel('lists-changes')
-            .on('postgres_changes', 
-                { event: '*', schema: 'public', table: 'lists' },
-                (payload) => {
-                    console.log('List change detected:', payload);
-                    loadLists();
-                }
-            )
-            .subscribe();
-
-        async function loadLists() {
-            try {
-                const { data, error } = await supabase
-                    .from('lists')
-                    .select('*')
-                    .order('position', { ascending: true });
-
-                if (error) throw error;
-
-                lists = data || [];
-                await loadTasks();
-            } catch (error) {
-                console.error('Error loading lists:', error);
-                renderLists();
-            }
-        }
-
-        async function loadTasks() {
-            try {
-                const { data, error } = await supabase
-                    .from('tasks')
-                    .select('*')
-                    .order('position', { ascending: true });
-
-                if (error) throw error;
-
-                tasks = {};
-                lists.forEach(list => {
-                    tasks[list.id] = data.filter(t => t.list_id === list.id);
-                });
-
-                renderLists();
-            } catch (error) {
-                console.error('Error loading tasks:', error);
-                renderLists();
-            }
+        async function loadData() {
+            const { data: listData } = await supabase.from('lists').select('*').order('position');
+            const { data: taskData } = await supabase.from('tasks').select('*').order('position');
+            
+            lists = listData || [];
+            tasks = {};
+            lists.forEach(l => tasks[l.id] = taskData.filter(t => t.list_id === l.id));
+            render();
         }
 
         async function addList() {
-            const input = document.getElementById('newListInput');
-            const name = input.value.trim();
-            
-            if (name === '') return;
-
-            try {
-                // Calculate position for new list (offset from last list or default)
-                let xPos = 10;
-                let yPos = 50;
-                
-                if (lists.length > 0) {
-                    const lastList = lists[lists.length - 1];
-                    xPos = (lastList.x_position || 0) + (lastList.width || 250) + 20;
-                    yPos = lastList.y_position || 50;
-                    
-                    // Wrap to next row if too far right
-                    if (xPos > window.innerWidth - 270) {
-                        xPos = 10;
-                        yPos += 250; // Move down
-                    }
-                }
-
-                const { data, error } = await supabase
-                    .from('lists')
-                    .insert([
-                        { 
-                            name: name,
-                            position: lists.length,
-                            x_position: xPos,
-                            y_position: yPos,
-                            width: 250
-                        }
-                    ])
-                    .select();
-
-                if (error) throw error;
-
-                input.value = '';
-                await loadLists();
-            } catch (error) {
-                console.error('Error adding list:', error);
-            }
-        }
-
-        async function deleteList(listId) {
-            if (!confirm('Delete this list and all its tasks?')) return;
-
-            try {
-                // Delete all tasks in the list first
-                await supabase
-                    .from('tasks')
-                    .delete()
-                    .eq('list_id', listId);
-
-                // Then delete the list
-                const { error } = await supabase
-                    .from('lists')
-                    .delete()
-                    .eq('id', listId);
-
-                if (error) throw error;
-                await loadLists();
-            } catch (error) {
-                console.error('Error deleting list:', error);
-            }
+            const name = document.getElementById('newListInput').value;
+            if (!name) return;
+            const { error } = await supabase.from('lists').insert([{ name, x_position: 50, y_position: 100, width: 250 }]);
+            if (error) alert("Error adding list: " + error.message);
+            document.getElementById('newListInput').value = '';
         }
 
         async function addTask(listId) {
             const input = document.getElementById(`input-${listId}`);
-            const text = input.value.trim();
-            
-            if (text === '') return;
-
-            try {
-                const currentTasks = tasks[listId] || [];
-                const { data, error } = await supabase
-                    .from('tasks')
-                    .insert([
-                        { 
-                            list_id: listId, 
-                            text: text, 
-                            completed: false,
-                            subtasks: [],
-                            position: currentTasks.length
-                        }
-                    ])
-                    .select();
-
-                if (error) throw error;
-
-                input.value = '';
-                await loadTasks();
-            } catch (error) {
-                console.error('Error adding task:', error);
-            }
+            if (!input.value) return;
+            await supabase.from('tasks').insert([{ list_id: listId, text: input.value, completed: false }]);
+            input.value = '';
         }
 
-        async function toggleTask(listId, taskId) {
-            try {
-                const task = tasks[listId].find(t => t.id === taskId);
-                if (!task) return;
-
-                const { error } = await supabase
-                    .from('tasks')
-                    .update({ completed: !task.completed })
-                    .eq('id', taskId);
-
-                if (error) throw error;
-                await loadTasks();
-            } catch (error) {
-                console.error('Error toggling task:', error);
-            }
+        async function toggleTask(id, current) {
+            await supabase.from('tasks').update({ completed: !current }).eq('id', id);
         }
 
-        async function deleteTask(listId, taskId) {
-            try {
-                const { error } = await supabase
-                    .from('tasks')
-                    .delete()
-                    .eq('id', taskId);
-
-                if (error) throw error;
-                await loadTasks();
-            } catch (error) {
-                console.error('Error deleting task:', error);
-            }
+        async function deleteList(id) {
+            if(confirm("Delete list?")) await supabase.from('lists').delete().eq('id', id);
         }
 
-        function showSubtaskInput(listId, taskId) {
-            const existingInput = document.querySelector('.subtask-input-container');
-            if (existingInput) existingInput.remove();
-
-            const taskEl = document.querySelector(`[data-task-id="${taskId}"]`);
-            const inputContainer = document.createElement('div');
-            inputContainer.className = 'subtask-input-container';
-            inputContainer.innerHTML = `
-                <input type="text" class="subtask-input" placeholder="Add subtask..." id="subtask-input-${taskId}">
-                <button class="subtask-add-btn" onclick="addSubtask(${listId}, ${taskId})">+</button>
-            `;
-            
-            taskEl.appendChild(inputContainer);
-            document.getElementById(`subtask-input-${taskId}`).focus();
-            
-            document.getElementById(`subtask-input-${taskId}`).addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    addSubtask(listId, taskId);
-                }
-            });
-        }
-
-        async function addSubtask(listId, taskId) {
-            const input = document.getElementById(`subtask-input-${taskId}`);
-            const text = input.value.trim();
-            
-            if (text === '') return;
-
-            try {
-                const task = tasks[listId].find(t => t.id === taskId);
-                if (!task) return;
-
-                const subtasks = task.subtasks || [];
-                subtasks.push({
-                    id: Date.now(),
-                    text: text,
-                    completed: false
-                });
-
-                const { error } = await supabase
-                    .from('tasks')
-                    .update({ subtasks: subtasks })
-                    .eq('id', taskId);
-
-                if (error) throw error;
-                await loadTasks();
-            } catch (error) {
-                console.error('Error adding subtask:', error);
-            }
-        }
-
-        async function toggleSubtask(listId, taskId, subtaskId) {
-            try {
-                const task = tasks[listId].find(t => t.id === taskId);
-                if (!task || !task.subtasks) return;
-
-                const subtasks = task.subtasks.map(s => 
-                    s.id === subtaskId ? { ...s, completed: !s.completed } : s
-                );
-
-                const { error } = await supabase
-                    .from('tasks')
-                    .update({ subtasks: subtasks })
-                    .eq('id', taskId);
-
-                if (error) throw error;
-                await loadTasks();
-            } catch (error) {
-                console.error('Error toggling subtask:', error);
-            }
-        }
-
-        async function deleteSubtask(listId, taskId, subtaskId) {
-            try {
-                const task = tasks[listId].find(t => t.id === taskId);
-                if (!task || !task.subtasks) return;
-
-                const subtasks = task.subtasks.filter(s => s.id !== subtaskId);
-
-                const { error } = await supabase
-                    .from('tasks')
-                    .update({ subtasks: subtasks })
-                    .eq('id', taskId);
-
-                if (error) throw error;
-                await loadTasks();
-            } catch (error) {
-                console.error('Error deleting subtask:', error);
-            }
-        }
-
-        function renderLists() {
+        function render() {
             const container = document.getElementById('listsContainer');
+            container.innerHTML = lists.map(list => `
+                <div class="list-container" style="left:${list.x_position}px; top:${list.y_position}px; width:${list.width}px" onmouseup="savePos(event, ${list.id}, this)">
+                    <div class="list-title">
+                        ${list.name}
+                        <button class="delete-list-btn" onclick="deleteList(${list.id})">✕</button>
+                    </div>
+                    <input type="text" id="input-${list.id}" class="task-input" placeholder="+" onkeypress="if(event.key==='Enter') addTask(${list.id})">
+                    <div class="tasks">
+                        ${(tasks[list.id] || []).map(t => `
+                            <div class="task ${t.completed ? 'completed' : ''}">
+                                <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="toggleTask(${t.id}, ${t.completed})"></div>
+                                <div class="task-text">${t.text}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
             
-            // Store current positions and widths before clearing
-            const currentStates = {};
-            container.querySelectorAll('.list-container').forEach(el => {
-                const listId = el.dataset.listId;
-                currentStates[listId] = {
-                    left: el.style.left,
-                    top: el.style.top,
-                    width: el.style.width
+            // Re-apply simple drag logic
+            document.querySelectorAll('.list-container').forEach(el => {
+                el.onmousedown = (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+                    let shiftX = e.clientX - el.getBoundingClientRect().left;
+                    let shiftY = e.clientY - el.getBoundingClientRect().top;
+                    document.onmousemove = (e) => {
+                        el.style.left = e.pageX - shiftX + 'px';
+                        el.style.top = e.pageY - shiftY + 'px';
+                    };
+                    document.onmouseup = () => { document.onmousemove = null; };
                 };
             });
-            
-            container.innerHTML = '';
-
-            if (lists.length === 0) {
-                container.innerHTML = '<div class="loading">No lists yet. Create one above!</div>';
-                return;
-            }
-
-            lists.forEach((list, index) => {
-                const listEl = document.createElement('div');
-                listEl.className = 'list-container';
-                listEl.dataset.listId = list.id;
-                
-                // Use current DOM state if it exists, otherwise use database values
-                const currentState = currentStates[list.id];
-                if (currentState) {
-                    listEl.style.left = currentState.left;
-                    listEl.style.top = currentState.top;
-                    listEl.style.width = currentState.width;
-                } else {
-                    listEl.style.left = `${list.x_position || 10}px`;
-                    listEl.style.top = `${list.y_position || 50}px`;
-                    listEl.style.width = `${list.width || 250}px`;
-                }
-                
-                listEl.innerHTML = `
-                    <div class="resize-handle"></div>
-                    <div class="list-header">
-                        <h2 class="list-title">${list.name}</h2>
-                        <button class="delete-list-btn" onclick="deleteList(${list.id})">Delete</button>
-                    </div>
-                    <div class="add-task-form">
-                        <input type="text" class="task-input" id="input-${list.id}" placeholder="Add a task...">
-                        <button class="add-btn" onclick="addTask(${list.id})">+</button>
-                    </div>
-                    <div class="tasks" id="tasks-${list.id}"></div>
-                `;
-                
-                // Add list drag handlers
-                listEl.addEventListener('mousedown', handleListMouseDown);
-                
-                // Add resize handler
-                const resizeHandle = listEl.querySelector('.resize-handle');
-                resizeHandle.addEventListener('mousedown', handleResizeMouseDown);
-                
-                container.appendChild(listEl);
-
-                // Add enter key listener
-                const input = listEl.querySelector(`#input-${list.id}`);
-                input.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        addTask(list.id);
-                    }
-                });
-
-                // Render tasks for this list
-                renderTasksForList(list.id);
-            });
         }
 
-        function renderTasksForList(listId) {
-            const container = document.getElementById(`tasks-${listId}`);
-            if (!container) return;
-
-            container.innerHTML = '';
-            const listTasks = tasks[listId] || [];
-
-            listTasks.forEach(task => {
-                const taskEl = document.createElement('div');
-                taskEl.className = 'task' + (task.completed ? ' completed' : '');
-                taskEl.draggable = true;
-                taskEl.dataset.taskId = task.id;
-                taskEl.dataset.listId = listId;
-                
-                let subtasksHTML = '';
-                if (task.subtasks && task.subtasks.length > 0) {
-                    subtasksHTML = '<div class="subtasks">';
-                    task.subtasks.forEach(subtask => {
-                        subtasksHTML += `
-                            <div class="subtask ${subtask.completed ? 'completed' : ''}">
-                                <div class="checkbox ${subtask.completed ? 'checked' : ''}" onclick="toggleSubtask(${listId}, ${task.id}, ${subtask.id})"></div>
-                                <div class="task-text">${subtask.text}</div>
-                                <button class="delete-btn" onclick="deleteSubtask(${listId}, ${task.id}, ${subtask.id})">×</button>
-                            </div>
-                        `;
-                    });
-                    subtasksHTML += '</div>';
-                }
-                
-                taskEl.innerHTML = `
-                    <div class="task-main">
-                        <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask(${listId}, ${task.id})"></div>
-                        <div class="task-text">${task.text}</div>
-                        <div class="task-actions">
-                            <button class="add-subtask-btn" onclick="showSubtaskInput(${listId}, ${task.id})" title="Add subtask">+</button>
-                            <button class="delete-btn" onclick="deleteTask(${listId}, ${task.id})">×</button>
-                        </div>
-                    </div>
-                    ${subtasksHTML}
-                `;
-                
-                taskEl.addEventListener('dragstart', handleDragStart);
-                taskEl.addEventListener('dragend', handleDragEnd);
-                
-                container.appendChild(taskEl);
-            });
-
-            // Set up drop zone
-            container.addEventListener('dragover', handleContainerDragOver);
-            container.addEventListener('drop', handleContainerDrop);
+        async function savePos(e, id, el) {
+            await supabase.from('lists').update({ x_position: parseInt(el.style.left), y_position: parseInt(el.style.top) }).eq('id', id);
         }
 
-        function handleDragStart(e) {
-            draggedTask = this;
-            draggedFrom = parseInt(this.dataset.listId);
-            this.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML);
-            e.stopPropagation();
-        }
-
-        async function handleDragEnd(e) {
-            this.classList.remove('dragging');
-            draggedTask = null;
-            draggedFrom = null;
-        }
-
-        function handleResizeMouseDown(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            
-            resizingList = e.target.parentElement;
-            resizeStartX = e.clientX;
-            resizeStartWidth = resizingList.offsetWidth;
-            
-            resizingList.classList.add('resizing');
-            
-            document.addEventListener('mousemove', handleResizeMouseMove);
-            document.addEventListener('mouseup', handleResizeMouseUp);
-        }
-
-        function handleResizeMouseMove(e) {
-            if (!resizingList) return;
-            
-            e.preventDefault();
-            
-            const deltaX = e.clientX - resizeStartX;
-            const newWidth = resizeStartWidth + deltaX;
-            
-            // Constrain width
-            const constrainedWidth = Math.max(150, Math.min(newWidth, 600));
-            resizingList.style.width = `${constrainedWidth}px`;
-        }
-
-        async function handleResizeMouseUp(e) {
-            if (!resizingList) return;
-            
-            document.removeEventListener('mousemove', handleResizeMouseMove);
-            document.removeEventListener('mouseup', handleResizeMouseUp);
-            
-            resizingList.classList.remove('resizing');
-            
-            const listId = parseInt(resizingList.dataset.listId);
-            const width = parseInt(resizingList.style.width);
-            
-            // Save width to database
-            try {
-                await supabase
-                    .from('lists')
-                    .update({ width: width })
-                    .eq('id', listId);
-            } catch (error) {
-                console.error('Error saving list width:', error);
-            }
-            
-            resizingList = null;
-        }
-
-        function handleListMouseDown(e) {
-            // Don't drag if clicking on input, button, checkbox, task, or resize handle
-            if (e.target.tagName === 'INPUT' || 
-                e.target.tagName === 'BUTTON' || 
-                e.target.classList.contains('checkbox') ||
-                e.target.classList.contains('task-text') ||
-                e.target.classList.contains('resize-handle') ||
-                e.target.closest('.task')) {
-                return;
-            }
-
-            draggedList = this;
-            const rect = this.getBoundingClientRect();
-            dragOffsetX = e.clientX - rect.left;
-            dragOffsetY = e.clientY - rect.top;
-            
-            this.classList.add('dragging-list');
-            
-            document.addEventListener('mousemove', handleListMouseMove);
-            document.addEventListener('mouseup', handleListMouseUp);
-            
-            e.preventDefault();
-        }
-
-        function handleListMouseMove(e) {
-            if (!draggedList) return;
-            
-            const x = e.clientX - dragOffsetX;
-            const y = e.clientY - dragOffsetY;
-            
-            // Keep within bounds
-            const maxX = window.innerWidth - draggedList.offsetWidth;
-            const maxY = window.innerHeight - draggedList.offsetHeight;
-            
-            const boundedX = Math.max(0, Math.min(x, maxX));
-            const boundedY = Math.max(0, Math.min(y, maxY));
-            
-            draggedList.style.left = `${boundedX}px`;
-            draggedList.style.top = `${boundedY}px`;
-        }
-
-        async function handleListMouseUp(e) {
-            if (!draggedList) return;
-            
-            document.removeEventListener('mousemove', handleListMouseMove);
-            document.removeEventListener('mouseup', handleListMouseUp);
-            
-            const listId = parseInt(draggedList.dataset.listId);
-            const x = parseInt(draggedList.style.left);
-            const y = parseInt(draggedList.style.top);
-            
-            draggedList.classList.remove('dragging-list');
-            draggedList = null;
-            
-            // Save position to database
-            try {
-                await supabase
-                    .from('lists')
-                    .update({ x_position: x, y_position: y })
-                    .eq('id', listId);
-            } catch (error) {
-                console.error('Error saving list position:', error);
-            }
-        }
-
-        function handleListDragStart(e) {
-            if (e.target.classList.contains('task')) {
-                return; // Let task drag handler take over
-            }
-            draggedList = this;
-            this.classList.add('dragging-list');
-            e.dataTransfer.effectAllowed = 'move';
-        }
-
-        function handleListDragEnd(e) {
-            this.classList.remove('dragging-list');
-            document.querySelectorAll('.list-container').forEach(el => {
-                el.classList.remove('drag-over-list');
-            });
-            draggedList = null;
-        }
-
-        function handleListDragOver(e) {
-            if (!draggedList || draggedList === this) return;
-            e.preventDefault();
-            e.stopPropagation();
-            this.classList.add('drag-over-list');
-            return false;
-        }
-
-        function handleListDragLeave(e) {
-            if (e.target === this) {
-                this.classList.remove('drag-over-list');
-            }
-        }
-
-        async function handleListDrop(e) {
-            if (!draggedList) return; // This is a task drop, not a list drop
-            
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (draggedList === this) return;
-            
-            const draggedPos = parseInt(draggedList.dataset.position);
-            const targetPos = parseInt(this.dataset.position);
-            
-            // Reorder lists array
-            const [movedList] = lists.splice(draggedPos, 1);
-            lists.splice(targetPos, 0, movedList);
-            
-            // Update positions in database
-            try {
-                const updates = lists.map((list, index) => 
-                    supabase
-                        .from('lists')
-                        .update({ position: index })
-                        .eq('id', list.id)
-                );
-                
-                await Promise.all(updates);
-                await loadLists();
-            } catch (error) {
-                console.error('Error reordering lists:', error);
-            }
-            
-            return false;
-        }
-
-        function handleContainerDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            return false;
-        }
-
-        async function handleContainerDrop(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            
-            if (!draggedTask || !draggedFrom) return false;
-            
-            const dropListId = parseInt(this.id.replace('tasks-', ''));
-            const draggedTaskId = parseInt(draggedTask.dataset.taskId);
-            
-            if (draggedFrom !== dropListId && draggedTaskId) {
-                try {
-                    const { error } = await supabase
-                        .from('tasks')
-                        .update({ list_id: dropListId })
-                        .eq('id', draggedTaskId);
-
-                    if (error) throw error;
-                    await loadTasks();
-                } catch (error) {
-                    console.error('Error moving task:', error);
-                }
-            }
-            
-            return false;
-        }
-
-        document.getElementById('newListInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addList();
-            }
-        });
-
-        loadLists();
+        loadData();
     </script>
 </body>
 </html>
