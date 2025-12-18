@@ -267,6 +267,7 @@
                                     <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="handleToggleTask(${t.id}, ${t.completed})"></div>
                                     <span class="task-text">${t.text}</span>
                                     <button class="add-sub-btn" onclick="handleAddSubtask(${t.id})">+</button>
+                                    <button class="add-sub-btn" onclick="handleSetReminder(${t.id})">⏱</button>
                                 </div>
                                 <div class="subtasks">
                                     ${(t.subtasks || []).map(s => `
