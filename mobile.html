@@ -261,6 +261,31 @@
             .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, loadData)
             .subscribe();
+
+// 1. Timer to send Push Notification
+setInterval(() => {
+    const now = new Date();
+    tasks.forEach(task => {
+        if (task.due_at && !task.completed && !task.notified) {
+            const due = new Date(task.due_at);
+            if (now >= due) {
+                sendPushNotification(task.text);
+                task.notified = true;
+            }
+        }
+    });
+}, 30000);
+
+// 2. The Push Function
+async function sendPushNotification(taskText) {
+    // Replace 'sarah_alerts' with whatever unique name you chose in the app
+    fetch('https://ntfy.sh/sarah_alerts', {
+        method: 'POST',
+        body: "Reminder: " + taskText,
+        headers: { 'Title': 'Task Alert' }
+    });
+}        
+        
     </script>
 </body>
 </html>
