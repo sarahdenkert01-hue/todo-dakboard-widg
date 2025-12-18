@@ -4,95 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dakboard Widget</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
     <style>
-        body { font-family: 'Comfortaa', sans-serif; background: transparent; color: white; padding: 20px; }
-        #connection-status { font-size: 10px; margin-bottom: 10px; color: #ff4d4d; } /* Default Red */
-        .controls { display: flex; gap: 10px; margin-bottom: 30px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; width: fit-content; }
-        input { padding: 10px; border-radius: 5px; border: 1px solid #555; background: #222; color: white; outline: none; }
-        button { padding: 10px 20px; border-radius: 5px; border: none; background: #4a90e2; color: white; cursor: pointer; font-weight: bold; }
-        button:active { transform: scale(0.98); }
-        .list-card { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 15px; margin-top: 10px; display: inline-block; min-width: 200px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 20px; }
+        #status { font-weight: bold; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
+        .offline { background: #4d0000; color: #ff9999; }
+        .online { background: #004d00; color: #99ff99; }
+        .hidden { display: none; }
+        
+        .box { background: #333; padding: 20px; border-radius: 10px; display: inline-block; }
+        input { padding: 10px; border-radius: 5px; border: 1px solid #555; margin-right: 10px; }
+        button { padding: 10px 20px; border-radius: 5px; border: none; background: #007bff; color: white; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="connection-status">● Database Offline</div>
+    <div id="status" class="offline">Checking Script Load...</div>
 
-    <div class="controls">
-        <input type="text" id="listInput" placeholder="New list name...">
-        <button id="addBtn">Add List</button>
+    <div id="app-content" class="hidden">
+        <div class="box">
+            <input type="text" id="listName" placeholder="Enter list name">
+            <button id="saveBtn">Create List</button>
+        </div>
+        <div id="listDisplay" style="margin-top:20px;"></div>
     </div>
 
-    <div id="contentArea"></div>
-
     <script>
-        // 1. Setup Variables
-        const statusDot = document.getElementById('connection-status');
-        const addBtn = document.getElementById('addBtn');
-        const listInput = document.getElementById('listInput');
-        const contentArea = document.getElementById('contentArea');
+        const statusDiv = document.getElementById('status');
+        const appContent = document.getElementById('app-content');
+        const saveBtn = document.getElementById('saveBtn');
+        const listInput = document.getElementById('listName');
 
-        const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
-        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
-        
-        let supabase;
-
-        // 2. Initialize and Test Connection
-        try {
-            supabase = window.supabase.createClient(S_URL, S_KEY);
-            statusDot.style.color = "#4cd964";
-            statusDot.innerText = "● Database Online";
-        } catch (err) {
-            statusDot.innerText = "● Error: " + err.message;
+        // 1. Verify if the Library actually loaded
+        if (typeof window.supabase === 'undefined') {
+            statusDiv.innerHTML = "❌ ERROR: Supabase library blocked by browser/network. Check your adblocker.";
+        } else {
+            initApp();
         }
 
-        // 3. The Function
-        async function createList() {
-            const name = listInput.value.trim();
-            if (!name) return;
-
-            addBtn.innerText = "Saving...";
+        function initApp() {
+            const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
+            const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
             
-            const { error } = await supabase
-                .from('lists')
-                .insert([{ 
-                    name: name, 
-                    x_position: 50, 
-                    y_position: 150, 
-                    width: 250 
-                }]);
+            const supabase = window.supabase.createClient(S_URL, S_KEY);
+            
+            statusDiv.innerHTML = "✅ Database Library Loaded. Ready to Add.";
+            statusDiv.className = "online";
+            appContent.classList.remove('hidden');
 
-            if (error) {
-                alert("Save Failed: " + error.message);
-                addBtn.innerText = "Add List";
-            } else {
-                listInput.value = "";
-                addBtn.innerText = "Add List";
-                fetchLists(); // Refresh the display
+            saveBtn.onclick = async () => {
+                const name = listInput.value.trim();
+                if (!name) return;
+
+                saveBtn.innerText = "Saving...";
+                const { error } = await supabase.from('lists').insert([{ name: name }]);
+
+                if (error) {
+                    alert("Error: " + error.message);
+                    saveBtn.innerText = "Create List";
+                } else {
+                    listInput.value = "";
+                    saveBtn.innerText = "Create List";
+                    loadLists();
+                }
+            };
+
+            async function loadLists() {
+                const { data } = await supabase.from('lists').select('*');
+                if (data) {
+                    document.getElementById('listDisplay').innerHTML = data.map(l => 
+                        `<div style="background:#444;padding:10px;margin:5px;border-radius:5px;">${l.name}</div>`
+                    ).join('');
+                }
             }
+            loadLists();
         }
-
-        // 4. The Loader
-        async function fetchLists() {
-            const { data, error } = await supabase.from('lists').select('*');
-            if (data) {
-                contentArea.innerHTML = data.map(l => `
-                    <div class="list-card">
-                        <strong>${l.name}</strong><br>
-                        <small style="opacity:0.5">ID: ${l.id}</small>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // 5. Explicitly bind the button
-        addBtn.onclick = createList;
-
-        // Start initial load
-        fetchLists();
     </script>
 </body>
 </html>
