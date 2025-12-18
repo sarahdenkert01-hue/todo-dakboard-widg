@@ -3,128 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dakboard Sync Widget</title>
-    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.js"></script>
+    <title>Dakboard Widget</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html { background: transparent; font-family: 'Comfortaa', cursive; padding: 10px; color: white; }
-        
-        /* On-Screen Console for Debugging */
-        #debug-log { 
-            position: fixed; bottom: 0; right: 0; background: rgba(0,0,0,0.8); 
-            color: #00ff00; font-size: 10px; padding: 5px; z-index: 9999; 
-            max-height: 100px; overflow: auto; width: 200px; pointer-events: none;
-        }
-
-        .add-list-section { 
-            margin-bottom: 20px; display: flex; gap: 8px; 
-            background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; width: fit-content; 
-        }
-        .add-list-input { padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); background: #222; color: white; }
-        .add-list-btn { padding: 8px 15px; border-radius: 4px; border: none; background: #4a90e2; color: white; cursor: pointer; }
-
-        .list-container { 
-            position: absolute; width: 250px; background: rgba(0,0,0,0.6); 
-            border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; 
-        }
-        .task { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
-        .checkbox { width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; }
-        .checkbox.checked { background: #4cd964; }
+        body { font-family: 'Comfortaa', sans-serif; background: transparent; color: white; padding: 20px; }
+        #connection-status { font-size: 10px; margin-bottom: 10px; color: #ff4d4d; } /* Default Red */
+        .controls { display: flex; gap: 10px; margin-bottom: 30px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 10px; width: fit-content; }
+        input { padding: 10px; border-radius: 5px; border: 1px solid #555; background: #222; color: white; outline: none; }
+        button { padding: 10px 20px; border-radius: 5px; border: none; background: #4a90e2; color: white; cursor: pointer; font-weight: bold; }
+        button:active { transform: scale(0.98); }
+        .list-card { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 15px; margin-top: 10px; display: inline-block; min-width: 200px; }
     </style>
 </head>
 <body>
 
-    <div id="debug-log">Status: Starting...</div>
+    <div id="connection-status">● Database Offline</div>
 
-    <div class="add-list-section">
-        <input type="text" id="newListInput" class="add-list-input" placeholder="List Name...">
-        <button class="add-list-btn" id="btn-add-list">Create List</button>
+    <div class="controls">
+        <input type="text" id="listInput" placeholder="New list name...">
+        <button id="addBtn">Add List</button>
     </div>
 
-    <div id="listsContainer"></div>
+    <div id="contentArea"></div>
 
     <script>
-        const logger = document.getElementById('debug-log');
-        function log(msg) { 
-            logger.innerText = msg;
-            console.log(msg);
-        }
+        // 1. Setup Variables
+        const statusDot = document.getElementById('connection-status');
+        const addBtn = document.getElementById('addBtn');
+        const listInput = document.getElementById('listInput');
+        const contentArea = document.getElementById('contentArea');
 
-        // --- CREDENTIALS ---
-        const SUPABASE_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
+        const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
+        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
         
         let supabase;
-        let lists = [];
 
-        // 1. Initialize Client safely
+        // 2. Initialize and Test Connection
         try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            log("Supabase: Initialized ✅");
-        } catch (e) {
-            log("Supabase Error: " + e.message);
+            supabase = window.supabase.createClient(S_URL, S_KEY);
+            statusDot.style.color = "#4cd964";
+            statusDot.innerText = "● Database Online";
+        } catch (err) {
+            statusDot.innerText = "● Error: " + err.message;
         }
 
-        // 2. Add List Function
-        async function handleAddList() {
-            const input = document.getElementById('newListInput');
-            const name = input.value.trim();
+        // 3. The Function
+        async function createList() {
+            const name = listInput.value.trim();
             if (!name) return;
 
-            log("Saving: " + name + "...");
+            addBtn.innerText = "Saving...";
             
-            const { data, error } = await supabase.from('lists').insert([{ 
-                name: name, 
-                x_position: 50, 
-                y_position: 150, 
-                width: 250 
-            }]).select();
+            const { error } = await supabase
+                .from('lists')
+                .insert([{ 
+                    name: name, 
+                    x_position: 50, 
+                    y_position: 150, 
+                    width: 250 
+                }]);
 
             if (error) {
-                log("Error: " + error.message);
+                alert("Save Failed: " + error.message);
+                addBtn.innerText = "Add List";
             } else {
-                log("Success! List Saved.");
-                input.value = '';
-                fetchData();
+                listInput.value = "";
+                addBtn.innerText = "Add List";
+                fetchLists(); // Refresh the display
             }
         }
 
-        // 3. Fetch Data
-        async function fetchData() {
-            log("Fetching data...");
-            const { data, error } = await supabase.from('lists').select('*').order('id');
-            if (error) {
-                log("Fetch Error: " + error.message);
-            } else {
-                lists = data || [];
-                render();
-                log("Loaded " + lists.length + " lists.");
+        // 4. The Loader
+        async function fetchLists() {
+            const { data, error } = await supabase.from('lists').select('*');
+            if (data) {
+                contentArea.innerHTML = data.map(l => `
+                    <div class="list-card">
+                        <strong>${l.name}</strong><br>
+                        <small style="opacity:0.5">ID: ${l.id}</small>
+                    </div>
+                `).join('');
             }
         }
 
-        // 4. Render UI
-        function render() {
-            const container = document.getElementById('listsContainer');
-            container.innerHTML = lists.map(l => `
-                <div class="list-container" style="left:${l.x_position}px; top:${l.y_position}px;">
-                    <div style="font-weight:bold; margin-bottom:10px;">${l.name}</div>
-                    <div style="font-size:12px; color:#aaa;">(Sync Active)</div>
-                </div>
-            `).join('');
-        }
+        // 5. Explicitly bind the button
+        addBtn.onclick = createList;
 
-        // 5. ATTACH EVENTS MANUALLY
-        document.getElementById('btn-add-list').addEventListener('click', () => {
-            log("Button clicked!");
-            handleAddList();
-        });
-
-        // Initialize
-        fetchData();
-
-        // Realtime Sync
-        supabase.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, fetchData).subscribe();
+        // Start initial load
+        fetchLists();
     </script>
 </body>
 </html>
