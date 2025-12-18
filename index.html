@@ -9,37 +9,19 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Comfortaa', cursive; background: transparent; color: white; padding: 20px; overflow: visible; }
-        
-        /* Fixed UI Elements */
         .add-list-section { margin-bottom: 20px; display: flex; gap: 10px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; width: fit-content; border: 1px solid rgba(255,255,255,0.1); }
         .add-list-input { padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; outline: none; }
         .add-list-btn { padding: 8px 16px; border-radius: 5px; border: none; background: #4a90e2; color: white; cursor: pointer; font-weight: bold; }
-
-        /* Draggable List Style */
-        .list-container {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 15px;
-            cursor: move;
-            min-height: 100px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        
+        .list-container { position: absolute; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px; cursor: move; min-height: 100px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .list-header { display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
         .list-title { font-size: 14px; font-weight: 700; }
         .delete-btn { background: none; border: none; color: #ff5f56; cursor: pointer; font-size: 14px; }
-
         .task-input { width: 100%; background: rgba(255,255,255,0.1); border: none; border-radius: 5px; color: white; padding: 10px; font-size: 12px; margin-bottom: 10px; outline: none; }
-        
         .task { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 5px; background: rgba(255,255,255,0.05); border-radius: 5px; }
         .checkbox { width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
         .checkbox.checked { background: #4cd964; border-color: #4cd964; position: relative; }
         .checkbox.checked::after { content: '✓'; color: white; font-size: 12px; position: absolute; top: -1px; left: 3px; }
         .task.completed .task-text { text-decoration: line-through; opacity: 0.5; }
-        
         .resize-handle { position: absolute; right: 0; bottom: 0; width: 15px; height: 15px; cursor: nwse-resize; }
     </style>
 </head>
@@ -53,145 +35,97 @@
     <div id="listsArea"></div>
 
     <script>
-        const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
-        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
-        
-        let supabase;
-        try {
-            supabase = window.supabase.createClient(S_URL, S_KEY);
-        } catch (e) {
-            alert("Critical: Supabase failed to load.");
+        // SAFETY CHECK: Prevents the "Already Declared" error
+        if (typeof supabaseClient === 'undefined') {
+            const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
+            const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
+            var supabaseClient = window.supabase.createClient(S_URL, S_KEY);
         }
 
         let lists = [];
         let tasks = [];
 
-        // 1. Fetching Data
         async function loadData() {
-            const { data: lData } = await supabase.from('lists').select('*').order('id');
-            const { data: tData } = await supabase.from('tasks').select('*').order('position');
-            lists = lData || [];
-            tasks = tData || [];
-            render();
+            try {
+                const { data: lData } = await supabaseClient.from('lists').select('*').order('id');
+                const { data: tData } = await supabaseClient.from('tasks').select('*').order('position');
+                lists = lData || [];
+                tasks = tData || [];
+                render();
+            } catch (e) { console.error("Load failed", e); }
         }
 
-        // 2. Add List (Fixed Trigger)
         document.getElementById('save-list-trigger').onclick = async () => {
             const input = document.getElementById('newListInput');
             const name = input.value.trim();
             if (!name) return;
-
-            const { error } = await supabase.from('lists').insert([{ 
-                name: name, x_position: 100, y_position: 150, width: 250 
-            }]);
-            
-            if (error) {
-                alert("Error: " + error.message);
-            } else {
-                input.value = "";
-                loadData();
-            }
+            const { error } = await supabaseClient.from('lists').insert([{ name, x_position: 100, y_position: 150, width: 250 }]);
+            if (!error) { input.value = ""; loadData(); }
         };
 
-        // 3. Add Task
         async function handleAddTask(listId, event) {
             if (event.key === 'Enter' && event.target.value) {
-                await supabase.from('tasks').insert([{ list_id: listId, text: event.target.value }]);
+                await supabaseClient.from('tasks').insert([{ list_id: listId, text: event.target.value }]);
                 event.target.value = "";
                 loadData();
             }
         }
 
-        // 4. Toggle Task
         async function handleToggle(taskId, currentStatus) {
-            await supabase.from('tasks').update({ completed: !currentStatus }).eq('id', taskId);
+            await supabaseClient.from('tasks').update({ completed: !currentStatus }).eq('id', taskId);
             loadData();
         }
 
-        // 5. Delete List
         async function handleDelete(id) {
             if (confirm("Delete this list?")) {
-                await supabase.from('tasks').delete().eq('list_id', id);
-                await supabase.from('lists').delete().eq('id', id);
+                await supabaseClient.from('tasks').delete().eq('list_id', id);
+                await supabaseClient.from('lists').delete().eq('id', id);
                 loadData();
             }
         }
 
-        // 6. Render Logic
         function render() {
             const area = document.getElementById('listsArea');
             area.innerHTML = lists.map(l => {
                 const listTasks = tasks.filter(t => t.list_id === l.id);
                 return `
                 <div class="list-container" id="list-${l.id}" style="left:${l.x_position}px; top:${l.y_position}px; width:${l.width}px">
-                    <div class="list-header">
-                        <span class="list-title">${l.name}</span>
-                        <button class="delete-btn" onclick="handleDelete(${l.id})">✕</button>
-                    </div>
+                    <div class="list-header"><span class="list-title">${l.name}</span><button class="delete-btn" onclick="handleDelete(${l.id})">✕</button></div>
                     <input type="text" class="task-input" placeholder="+ Add task" onkeypress="handleAddTask(${l.id}, event)">
-                    <div>
-                        ${listTasks.map(t => `
-                            <div class="task ${t.completed ? 'completed' : ''}">
-                                <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="handleToggle(${t.id}, ${t.completed})"></div>
-                                <span class="task-text">${t.text}</span>
-                            </div>
-                        `).join('')}
-                    </div>
+                    <div>${listTasks.map(t => `<div class="task ${t.completed ? 'completed' : ''}"><div class="checkbox ${t.completed ? 'checked' : ''}" onclick="handleToggle(${t.id}, ${t.completed})"></div><span class="task-text">${t.text}</span></div>`).join('')}</div>
                     <div class="resize-handle" onmousedown="startResizing(event, ${l.id})"></div>
-                </div>
-                `;
+                </div>`;
             }).join('');
-            
             makeDraggable();
         }
 
-        // 7. Dragging Logic
         function makeDraggable() {
             document.querySelectorAll('.list-container').forEach(el => {
                 el.onmousedown = (e) => {
                     if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.classList.contains('checkbox')) return;
-                    
-                    let sX = e.clientX - el.offsetLeft;
-                    let sY = e.clientY - el.offsetTop;
-                    
-                    document.onmousemove = (moveEvent) => {
-                        el.style.left = (moveEvent.pageX - sX) + 'px';
-                        el.style.top = (moveEvent.pageY - sY) + 'px';
-                    };
-                    
+                    let sX = e.clientX - el.offsetLeft, sY = e.clientY - el.offsetTop;
+                    document.onmousemove = (m) => { el.style.left = (m.pageX - sX) + 'px'; el.style.top = (m.pageY - sY) + 'px'; };
                     document.onmouseup = async () => {
                         document.onmousemove = null;
                         const id = el.id.split('-')[1];
-                        await supabase.from('lists').update({ 
-                            x_position: parseInt(el.style.left), 
-                            y_position: parseInt(el.style.top) 
-                        }).eq('id', id);
+                        await supabaseClient.from('lists').update({ x_position: parseInt(el.style.left), y_position: parseInt(el.style.top) }).eq('id', id);
                     };
                 };
             });
         }
 
-        // 8. Resizing Logic
         function startResizing(e, id) {
-            e.preventDefault();
-            e.stopPropagation();
-            const el = document.getElementById(`list-${id}`);
-            const startW = el.offsetWidth;
-            const startX = e.clientX;
-            
-            document.onmousemove = (mE) => {
-                el.style.width = (startW + mE.clientX - startX) + 'px';
-            };
-            
+            e.preventDefault(); e.stopPropagation();
+            const el = document.getElementById(`list-${id}`), startW = el.offsetWidth, startX = e.clientX;
+            document.onmousemove = (m) => { el.style.width = (startW + m.clientX - startX) + 'px'; };
             document.onmouseup = async () => {
                 document.onmousemove = null;
-                await supabase.from('lists').update({ width: parseInt(el.style.width) }).eq('id', id);
+                await supabaseClient.from('lists').update({ width: parseInt(el.style.width) }).eq('id', id);
             };
         }
 
-        // 9. Initial Load & Sync
         loadData();
-        supabase.channel('sync').on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
+        supabaseClient.channel('sync').on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, loadData).subscribe();
     </script>
 </body>
