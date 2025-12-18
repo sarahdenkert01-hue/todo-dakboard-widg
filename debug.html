@@ -1,0 +1,365 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List - Debug</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comfortaa', cursive;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .debug-panel {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .debug-panel h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .debug-log {
+            background: #f5f5f5;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 5px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .list-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .list-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .add-task-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .task-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Comfortaa', cursive;
+        }
+
+        .add-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .task {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkbox.checked {
+            background: #667eea;
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+        }
+
+        .task-text {
+            flex: 1;
+            color: #333;
+        }
+
+        .delete-btn {
+            padding: 5px 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .credentials-check {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff3cd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="debug-panel">
+            <h3>Debug Console</h3>
+            <div id="debugLog"></div>
+            <div class="credentials-check">
+                <div>Supabase URL: <span id="urlCheck">Checking...</span></div>
+                <div>Supabase Key: <span id="keyCheck">Checking...</span></div>
+            </div>
+        </div>
+
+        <div class="list-container">
+            <h2 class="list-title">This Week</h2>
+            <div class="add-task-form">
+                <input type="text" class="task-input" id="thisWeekInput" placeholder="Add a task...">
+                <button class="add-btn" onclick="addTask('thisWeek')">+</button>
+            </div>
+            <div class="tasks" id="thisWeek"></div>
+        </div>
+
+        <div class="list-container">
+            <h2 class="list-title">For Later</h2>
+            <div class="add-task-form">
+                <input type="text" class="task-input" id="forLaterInput" placeholder="Add a task...">
+                <button class="add-btn" onclick="addTask('forLater')">+</button>
+            </div>
+            <div class="tasks" id="forLater"></div>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ REPLACE THESE WITH YOUR SUPABASE CREDENTIALS
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
+        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+
+        function log(message, type = 'info') {
+            const debugLog = document.getElementById('debugLog');
+            const logEntry = document.createElement('div');
+            logEntry.className = `debug-log ${type}`;
+            logEntry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            debugLog.appendChild(logEntry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(message);
+        }
+
+        // Check credentials
+        document.getElementById('urlCheck').textContent = SUPABASE_URL.includes('YOUR_') ? '❌ NOT SET' : '✅ ' + SUPABASE_URL.substring(0, 30) + '...';
+        document.getElementById('keyCheck').textContent = SUPABASE_KEY.includes('YOUR_') ? '❌ NOT SET' : '✅ ' + SUPABASE_KEY.substring(0, 20) + '...';
+
+        if (SUPABASE_URL.includes('YOUR_') || SUPABASE_KEY.includes('YOUR_')) {
+            log('❌ ERROR: Supabase credentials not set!', 'error');
+        } else {
+            log('✅ Credentials loaded', 'success');
+        }
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        log('Supabase client initialized', 'info');
+
+        let tasks = {
+            thisWeek: [],
+            forLater: []
+        };
+
+        async function loadTasks() {
+            log('Loading tasks from Supabase...', 'info');
+            try {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .order('position', { ascending: true });
+
+                if (error) {
+                    log(`❌ Error loading tasks: ${error.message}`, 'error');
+                    throw error;
+                }
+
+                log(`✅ Loaded ${data.length} tasks from database`, 'success');
+
+                tasks = {
+                    thisWeek: data.filter(t => t.list_id === 'thisWeek'),
+                    forLater: data.filter(t => t.list_id === 'forLater')
+                };
+
+                renderTasks();
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+                renderTasks();
+            }
+        }
+
+        async function addTask(listId) {
+            const input = document.getElementById(listId + 'Input');
+            const text = input.value.trim();
+            
+            if (text === '') {
+                log('⚠️ Cannot add empty task', 'info');
+                return;
+            }
+
+            log(`Attempting to add task: "${text}" to ${listId}`, 'info');
+
+            try {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .insert([
+                        { 
+                            list_id: listId, 
+                            text: text, 
+                            completed: false,
+                            subtasks: [],
+                            position: tasks[listId].length
+                        }
+                    ])
+                    .select();
+
+                if (error) {
+                    log(`❌ Error adding task: ${error.message}`, 'error');
+                    log(`Error details: ${JSON.stringify(error)}`, 'error');
+                    throw error;
+                }
+
+                log(`✅ Task added successfully! ID: ${data[0].id}`, 'success');
+                input.value = '';
+                await loadTasks();
+            } catch (error) {
+                log(`❌ Exception adding task: ${error.message}`, 'error');
+            }
+        }
+
+        async function toggleTask(listId, taskId) {
+            log(`Toggling task ${taskId}`, 'info');
+            try {
+                const task = tasks[listId].find(t => t.id === taskId);
+                if (!task) return;
+
+                const { error } = await supabase
+                    .from('tasks')
+                    .update({ completed: !task.completed })
+                    .eq('id', taskId);
+
+                if (error) {
+                    log(`❌ Error toggling: ${error.message}`, 'error');
+                    throw error;
+                }
+                log(`✅ Task toggled`, 'success');
+                await loadTasks();
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteTask(listId, taskId) {
+            log(`Deleting task ${taskId}`, 'info');
+            try {
+                const { error } = await supabase
+                    .from('tasks')
+                    .delete()
+                    .eq('id', taskId);
+
+                if (error) {
+                    log(`❌ Error deleting: ${error.message}`, 'error');
+                    throw error;
+                }
+                log(`✅ Task deleted`, 'success');
+                await loadTasks();
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        function renderTasks() {
+            ['thisWeek', 'forLater'].forEach(listId => {
+                const container = document.getElementById(listId);
+                container.innerHTML = '';
+                
+                if (tasks[listId].length === 0) {
+                    container.innerHTML = '<div style="color: #999; padding: 10px;">No tasks yet</div>';
+                }
+                
+                tasks[listId].forEach(task => {
+                    const taskEl = document.createElement('div');
+                    taskEl.className = 'task' + (task.completed ? ' completed' : '');
+                    
+                    taskEl.innerHTML = `
+                        <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask('${listId}', ${task.id})"></div>
+                        <div class="task-text">${task.text}</div>
+                        <button class="delete-btn" onclick="deleteTask('${listId}', ${task.id})">Delete</button>
+                    `;
+                    
+                    container.appendChild(taskEl);
+                });
+            });
+        }
+
+        document.getElementById('thisWeekInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTask('thisWeek');
+            }
+        });
+
+        document.getElementById('forLaterInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTask('forLater');
+            }
+        });
+
+        log('Initializing app...', 'info');
+        loadTasks();
+    </script>
+</body>
+</html>
