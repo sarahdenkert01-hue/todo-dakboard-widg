@@ -12,6 +12,10 @@
         body { 
             font-family: 'Comfortaa', cursive; 
             background: url(phonebackground2.jpg); 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
             color: white; 
             padding: 15px; 
             min-height: 100vh;
@@ -235,7 +239,6 @@
                                     <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="handleToggleTask(${t.id}, ${t.completed})"></div>
                                     <span class="task-text">${t.text}</span>
                                     <button class="add-sub-btn" onclick="handleAddSubtask(${t.id})">+</button>                                   
-                                    <span class="task-text">${t.text}</span>
                                     <button class="add-sub-btn" onclick="handleSetReminder(${t.id})">⏰</button>
                                 </div>
                                 <div class="subtasks">
