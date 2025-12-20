@@ -29,23 +29,12 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
         .add-list-input { 
-            padding: 8px; 
-            border-radius: 5px; 
-            border: 1px solid rgba(255,255,255,0.2); 
-            background: rgba(0,0,0,0.5); 
-            color: white; 
-            outline: none; 
-            font-family: inherit;
+            padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); 
+            background: rgba(0,0,0,0.5); color: white; outline: none; font-family: inherit;
         }
         .add-list-btn { 
-            padding: 8px 16px; 
-            border-radius: 5px; 
-            border: none; 
-            background: #bbfce2; 
-            color: white; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-family: inherit;
+            padding: 8px 16px; border-radius: 5px; border: none; 
+            background: #bbfce2; color: #333; cursor: pointer; font-weight: bold; font-family: inherit;
         }
 
         /* Transparent List Containers */
@@ -60,110 +49,86 @@
             cursor: move;
             min-height: 120px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 10;
         }
         
         .list-header { 
             display: flex; 
             justify-content: space-between; 
+            align-items: center;
             margin-bottom: 12px; 
             border-bottom: 1px solid rgba(255,255,255,0.1); 
             padding-bottom: 5px; 
         }
-        .list-title { font-size: 15px; font-weight: 700; }
-        .delete-btn { background: none; border: none; color: #ff5f56; cursor: pointer; font-size: 14px; padding: 0 5px; }
+        .list-title { font-size: 14px; font-weight: 700; }
 
-        /* Task Inputs */
-        .task-input { 
-            width: 100%; 
-            background: rgba(255,255,255,0.1); 
-            border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 5px; 
-            color: white; 
-            padding: 10px; 
-            font-size: 12px; 
-            margin-bottom: 12px; 
-            outline: none; 
-            position: relative;
-            z-index: 2; /* Ensures it stays above the dragging layer */
-        }
-
-        /* Task Rows */
+        /* TASK ROW STYLING - THE SPACING FIX */
         .task { 
-            display: flex; 
-            flex-direction: column; 
-            margin-bottom: 12px; 
-            padding: 6px; 
-            background: rgba(255,255,255,0.03); 
-            border-radius: 6px; 
+            display: flex; flex-direction: column; margin-bottom: 12px; 
+            padding: 8px; background: rgba(255,255,255,0.03); border-radius: 8px; 
         }
-        .task-main { display: flex; align-items: center; gap: 10px; }
-        .task-text { flex: 1; font-size: 13px; line-height: 1.4; }
+        .task-main { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            width: 100%;
+            gap: 10px; 
+        }
+        .task-content-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            overflow: hidden;
+        }
+        .task-text { 
+            font-size: 13px; 
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .task.completed .task-text { text-decoration: line-through; opacity: 0.5; }
+
+        .task-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ICON STYLING */
+        .icon-btn {
+            background: none; border: none; cursor: pointer;
+            display: flex; align-items: center; padding: 2px;
+        }
+        .ui-icon {
+            width: 20px; height: 20px; object-fit: contain; display: block;
+        }
 
         /* Checkboxes */
         .checkbox { 
-            width: 18px; 
-            height: 18px; 
-            border: 2px solid white; 
-            border-radius: 50%; 
-            cursor: pointer; 
-            flex-shrink: 0; 
+            width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; 
+            cursor: pointer; flex-shrink: 0; 
         }
-        .checkbox.checked { 
-            background: #4cd964; 
-            border-color: #4cd964; 
-            position: relative; 
-        }
+        .checkbox.checked { background: #4cd964; border-color: #4cd964; position: relative; }
         .checkbox.checked::after { 
-            content: '✓'; 
-            color: white; 
-            font-size: 12px; 
-            position: absolute; 
-            top: -1px; 
-            left: 3px; 
+            content: '✓'; color: white; font-size: 12px; 
+            position: absolute; top: -1px; left: 3px; 
         }
 
         /* Subtasks */
-        .subtasks { 
-            margin-left: 28px; 
-            margin-top: 8px; 
-            border-left: 1px solid rgba(255,255,255,0.1); 
-            padding-left: 10px; 
-        }
-        .subtask { 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            margin-bottom: 5px; 
-            font-size: 11px; 
-        }
-        .sub-checkbox { 
-            width: 14px; 
-            height: 14px; 
-            border: 1px solid white; 
-            border-radius: 50%; 
-            cursor: pointer; 
-        }
+        .subtasks { margin-left: 28px; margin-top: 8px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px; }
+        .subtask { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 11px; }
+        .sub-checkbox { width: 14px; height: 14px; border: 1px solid white; border-radius: 50%; cursor: pointer; }
         .sub-checkbox.checked { background: #4cd964; border-color: #4cd964; }
-        .add-sub-btn { 
-            background: rgba(255,255,255,0.1); 
-            border: none; 
-            color: #4cd964; 
-            cursor: pointer; 
-            font-size: 16px; 
-            border-radius: 4px; 
-            padding: 0 6px; 
-            line-height: 1;
+
+        .task-input { 
+            width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 5px; color: white; padding: 10px; font-size: 12px; margin-bottom: 12px; 
+            outline: none; position: relative; z-index: 2;
         }
-        .resize-handle { 
-            position: absolute; 
-            right: 0; 
-            bottom: 0; 
-            width: 15px; 
-            height: 15px; 
-            cursor: nwse-resize; 
-            z-index: 3;
-        }
+        .resize-handle { position: absolute; right: 0; bottom: 0; width: 15px; height: 15px; cursor: nwse-resize; z-index: 3; }
     </style>
 </head>
 <body>
@@ -176,7 +141,6 @@
     <div id="listsArea"></div>
 
     <script>
-        // Use a persistent client to avoid "already declared" errors
         if (typeof supabaseClient === 'undefined') {
             const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
             const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
@@ -196,13 +160,12 @@
             } catch (e) { console.error("Sync Error:", e); }
         }
 
-        // --- LIST ACTIONS ---
         document.getElementById('save-list-trigger').onclick = async () => {
             const input = document.getElementById('newListInput');
             const name = input.value.trim();
             if (!name) return;
-            const { error } = await supabaseClient.from('lists').insert([{ name, x_position: 100, y_position: 150, width: 250 }]);
-            if (!error) { input.value = ""; loadData(); }
+            await supabaseClient.from('lists').insert([{ name, x_position: 100, y_position: 150, width: 250 }]);
+            input.value = ""; loadData();
         };
 
         async function handleDeleteList(id) {
@@ -213,12 +176,10 @@
             }
         }
 
-        // --- TASK ACTIONS ---
         async function handleAddTask(listId, event) {
             if (event.key === 'Enter' && event.target.value) {
                 await supabaseClient.from('tasks').insert([{ list_id: listId, text: event.target.value, subtasks: [] }]);
-                event.target.value = "";
-                loadData();
+                event.target.value = ""; loadData();
             }
         }
 
@@ -227,15 +188,11 @@
             loadData();
         }
 
-        // --- SUBTASK ACTIONS ---
         async function handleAddSubtask(taskId) {
             const text = prompt("New subtask:");
             if (!text) return;
-
             const task = tasks.find(t => t.id === taskId);
-            const currentSubtasks = task.subtasks || [];
-            const updated = [...currentSubtasks, { id: Date.now(), text, completed: false }];
-
+            const updated = [...(task.subtasks || []), { id: Date.now(), text, completed: false }];
             await supabaseClient.from('tasks').update({ subtasks: updated }).eq('id', taskId);
             loadData();
         }
@@ -247,7 +204,15 @@
             loadData();
         }
 
-        // --- RENDER ---
+        async function handleSetReminder(taskId) {
+            const time = prompt("Enter reminder (YYYY-MM-DD HH:MM)", "2025-12-18 14:00");
+            if (time) {
+                const isoTime = new Date(time).toISOString();
+                await supabaseClient.from('tasks').update({ due_at: isoTime }).eq('id', taskId);
+                loadData();
+            }
+        }
+
         function render() {
             const area = document.getElementById('listsArea');
             area.innerHTML = lists.map(l => {
@@ -256,17 +221,27 @@
                 <div class="list-container" id="list-${l.id}" style="left:${l.x_position}px; top:${l.y_position}px; width:${l.width}px">
                     <div class="list-header">
                         <span class="list-title">${l.name}</span>
-                        <button class="delete-btn" onclick="handleDeleteList(${l.id})">✕</button>
+                        <button class="icon-btn" onclick="handleDeleteList(${l.id})">
+                            <img src="x-button.png" class="ui-icon" alt="Delete">
+                        </button>
                     </div>
                     <input type="text" class="task-input" placeholder="+ Add task" onkeypress="handleAddTask(${l.id}, event)">
                     <div>
                         ${listTasks.map(t => `
                             <div class="task ${t.completed ? 'completed' : ''}">
                                 <div class="task-main">
-                                    <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="handleToggleTask(${t.id}, ${t.completed})"></div>
-                                    <span class="task-text">${t.text}</span>
-                                    <button class="add-sub-btn" onclick="handleAddSubtask(${t.id})">+</button>
-                                    <button class="add-sub-btn" onclick="handleSetReminder(${t.id})">⏱</button>
+                                    <div class="task-content-wrapper">
+                                        <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="handleToggleTask(${t.id}, ${t.completed})"></div>
+                                        <span class="task-text">${t.text}</span>
+                                    </div>
+                                    <div class="task-actions">
+                                        <button class="icon-btn" onclick="handleAddSubtask(${t.id})">
+                                            <img src="plus-button.png" class="ui-icon" alt="Add">
+                                        </button>
+                                        <button class="icon-btn" onclick="handleSetReminder(${t.id})">
+                                            <img src="alarm-button.png" class="ui-icon" alt="Alarm">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="subtasks">
                                     ${(t.subtasks || []).map(s => `
@@ -285,15 +260,16 @@
             makeDraggable();
         }
 
-        // --- INTERACTION LOGIC ---
         function makeDraggable() {
             document.querySelectorAll('.list-container').forEach(el => {
                 el.onmousedown = (e) => {
-                    // Prevent dragging when interacting with UI elements
-                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.classList.contains('checkbox') || e.target.classList.contains('sub-checkbox') || e.target.classList.contains('resize-handle')) {
+                    if (e.target.tagName === 'INPUT' || e.target.closest('button') || e.target.tagName === 'IMG' || e.target.classList.contains('checkbox') || e.target.classList.contains('sub-checkbox') || e.target.classList.contains('resize-handle')) {
                         return; 
                     }
                     
+                    document.querySelectorAll('.list-container').forEach(c => c.style.zIndex = "10");
+                    el.style.zIndex = "100";
+
                     let sX = e.clientX - el.offsetLeft, sY = e.clientY - el.offsetTop;
                     document.onmousemove = (m) => {
                         el.style.left = (m.pageX - sX) + 'px';
@@ -320,46 +296,22 @@
             };
         }
 
-        // Initial Load and Realtime Subscription
+        setInterval(() => {
+            const now = new Date();
+            tasks.forEach(task => {
+                if (task.due_at && !task.completed && !task.notified) {
+                    const due = new Date(task.due_at);
+                    if (now >= due) {
+                        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(e => console.log("Audio blocked"));
+                        task.notified = true;
+                    }
+                }
+            });
+        }, 30000);
+
         loadData();
-        supabaseClient.channel('realtime-sync')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, loadData)
-            .subscribe();
-
-// 1. Monitor for due dates every 30 seconds
-setInterval(() => {
-    const now = new Date();
-    tasks.forEach(task => {
-        // Only alert if task has a due date, isn't done, and hasn't notified yet
-        if (task.due_at && !task.completed && !task.notified) {
-            const due = new Date(task.due_at);
-            if (now >= due) {
-                playAlertTone();
-                task.notified = true; // Prevents the tone from repeating
-                console.log("Alarm triggered for: " + task.text);
-            }
-        }
-    });
-}, 30000);
-
-// 2. The Sound Function
-function playAlertTone() {
-    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    audio.play().catch(e => {
-        console.log("Audio blocked: Interaction needed once per session.");
-    });
-}
-
-// 3. The Function to set the time
-async function handleSetReminder(taskId) {
-    const time = prompt("Enter reminder (Format: YYYY-MM-DD HH:MM)", "2025-12-18 14:00");
-    if (time) {
-        const isoTime = new Date(time).toISOString();
-        await supabaseClient.from('tasks').update({ due_at: isoTime }).eq('id', taskId);
-        loadData();
-    }
-}         
+        supabaseClient.channel('realtime-sync').on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, loadData)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, loadData).subscribe();
     </script>
 </body>
 </html>
