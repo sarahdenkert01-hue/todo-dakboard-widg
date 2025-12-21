@@ -2,193 +2,267 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dakboard Sync Widget</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SyncPro App</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html { background: transparent; font-family: 'Comfortaa', cursive; padding: 10px; color: white; overflow: visible; }
-
-        .add-list-section { 
-            margin-bottom: 25px; display: flex; gap: 10px; background: rgba(0,0,0,0.3); 
-            padding: 12px; border-radius: 10px; width: fit-content; border: 1px solid rgba(255,255,255,0.1);
+        body { 
+            background: #1a1a1a; font-family: 'Comfortaa', cursive; color: white; 
+            padding-bottom: 90px; overflow-x: hidden;
         }
-        .add-list-input { padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: white; outline: none; font-family: inherit; }
-        .add-list-btn { padding: 8px 16px; border-radius: 5px; border: none; background: #bbfce2; color: #333; cursor: pointer; font-weight: bold; }
 
-        /* LIST CONTAINER - Movement and Resize Fixes */
-        .list-container {
-            position: absolute; /* Allows manual placement */
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 15px;
-            cursor: move;
-            min-height: 120px;
-            min-width: 200px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            z-index: 10;
+        /* Navigation Bar */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 75px;
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
+            display: flex; justify-content: space-around; align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1); z-index: 1000;
         }
-        
-        .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
-        .list-title { font-size: 14px; font-weight: 700; }
+        .nav-btn { background: none; border: none; color: white; opacity: 0.5; font-family: inherit; font-size: 14px; }
+        .nav-btn.active { opacity: 1; font-weight: bold; color: #bbfce2; }
 
-        /* TASK ROW - Layout and Spacing Fixes */
-        .task { display: flex; flex-direction: column; margin-bottom: 12px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 8px; }
-        .task-main { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px; }
-        .task-content-wrapper { display: flex; align-items: center; gap: 10px; flex: 1; overflow: hidden; }
-        .task-text { font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .task.completed .task-text { text-decoration: line-through; opacity: 0.5; }
-        .task-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        /* Panels */
+        .view-panel { display: none; padding: 20px; animation: fadeIn 0.3s ease; }
+        .view-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .icon-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; padding: 2px; }
-        .ui-icon { width: 18px; height: 18px; object-fit: contain; }
-
-        .checkbox { width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
+        /* Lists & Tasks */
+        .list-container { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .task-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
+        .task-content-wrapper { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .ui-icon { width: 20px; height: 20px; object-fit: contain; }
+        .icon-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; }
+        .checkbox { width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; }
         .checkbox.checked { background: #4cd964; border-color: #4cd964; position: relative; }
         .checkbox.checked::after { content: '✓'; color: white; font-size: 12px; position: absolute; top: -1px; left: 3px; }
 
-        .subtasks { margin-left: 28px; margin-top: 8px; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px; }
-        .subtask { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 11px; }
-        .sub-checkbox { width: 14px; height: 14px; border: 1px solid white; border-radius: 50%; cursor: pointer; }
-        .sub-checkbox.checked { background: #4cd964; border-color: #4cd964; }
-
-        .task-input { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; color: white; padding: 10px; font-size: 12px; margin-bottom: 12px; outline: none; }
-        .resize-handle { position: absolute; right: 0; bottom: 0; width: 15px; height: 15px; cursor: nwse-resize; z-index: 20; }
+        /* Notes & Search */
+        .search-input { width: 100%; padding: 12px; border-radius: 10px; border: none; background: rgba(255,255,255,0.1); color: white; margin-bottom: 20px; font-family: inherit; outline: none; }
+        .note-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .folder-group-title { font-size: 12px; color: #bbfce2; text-transform: uppercase; margin: 20px 0 10px 0; letter-spacing: 1px; }
+        .note-editor { width: 100%; height: 60vh; background: transparent; color: white; border: none; outline: none; font-family: inherit; font-size: 16px; resize: none; margin-top: 15px; line-height: 1.6; }
+        
+        .action-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+        .primary-btn { flex: 1; background: #bbfce2; padding: 12px; border-radius: 8px; border: none; font-weight: bold; font-family: inherit; font-size: 13px; color: #1a1a1a; }
+        .secondary-btn { background: rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 8px; border: none; font-family: inherit; font-size: 13px; }
+        .danger-btn { color: #ff5f56; background: none; border: none; font-size: 14px; font-family: inherit; }
     </style>
 </head>
 <body>
 
-    <div class="add-list-section">
-        <input type="text" id="newListInput" class="add-list-input" placeholder="New list name...">
-        <button class="add-list-btn" id="save-list-trigger">Add List</button>
+    <div id="tasksView" class="view-panel active">
+        <div class="action-bar">
+            <input type="text" id="newListInput" style="flex:2; padding:12px; border-radius:8px; border:none; background:rgba(255,255,255,0.1); color:white;" placeholder="New list name...">
+            <button class="primary-btn" onclick="handleAddList()">Add List</button>
+        </div>
+        <div id="listsArea"></div>
     </div>
 
-    <div id="listsArea"></div>
+    <div id="notesView" class="view-panel">
+        <div id="notesList">
+            <input type="text" id="noteSearch" class="search-input" placeholder="Search notes..." oninput="filterNotes()">
+            <div class="action-bar">
+                <button class="primary-btn" onclick="createNewNote()">+ New Note</button>
+                <button class="secondary-btn" onclick="createNewFolder()">+ Folder</button>
+            </div>
+            <div id="notesArea"></div>
+        </div>
+
+        <div id="editorArea" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
+                <button onclick="closeEditor()" style="color:#bbfce2; background:none; border:none; font-size:16px;">← Done</button>
+                <select id="noteFolderSelect" onchange="autoSave()" style="background:rgba(255,255,255,0.15); color:white; border:none; border-radius:5px; padding:6px; font-family:inherit; font-size:12px; flex:1; max-width: 120px;">
+                    <option value="">No Folder</option>
+                </select>
+                <button class="danger-btn" onclick="deleteCurrentNote()">Delete</button>
+            </div>
+            <div style="text-align: right; margin-top: 10px;">
+                <span id="saveStatus" style="font-size:11px; color:rgba(255,255,255,0.4);">Saved</span>
+            </div>
+            <input type="text" id="noteTitle" oninput="autoSave()" style="width:100%; background:none; border:none; color:white; font-size:24px; font-weight:bold; margin-top:10px; outline:none;" placeholder="Untitled Note">
+            <textarea id="noteText" class="note-editor" oninput="autoSave()" placeholder="Start writing..."></textarea>
+        </div>
+    </div>
+
+    <nav class="nav-bar">
+        <button class="nav-btn active" onclick="switchView('tasks', this)">Lists</button>
+        <button class="nav-btn" onclick="switchView('notes', this)">Notes</button>
+    </nav>
 
     <script>
         const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
         const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
         const supabaseClient = window.supabase.createClient(S_URL, S_KEY);
 
-        let lists = [], tasks = [];
+        let lists = [], tasks = [], allNotes = [], currentNoteId = null, saveTimer;
 
+        // PWA REGISTRATION
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
+        }
+
+        function switchView(viewId, btn) {
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(viewId + 'View').classList.add('active');
+            btn.classList.add('active');
+            if(viewId === 'notes') loadNotes(); else loadData();
+        }
+
+        // --- TASK LOGIC ---
         async function loadData() {
             const { data: lData } = await supabaseClient.from('lists').select('*').order('id');
             const { data: tData } = await supabaseClient.from('tasks').select('*').order('position');
             lists = lData || []; tasks = tData || [];
-            render();
+            renderTasks();
         }
 
-        // --- ACTIONS ---
-        document.getElementById('save-list-trigger').onclick = async () => {
+        async function handleAddList() {
             const name = document.getElementById('newListInput').value.trim();
             if (!name) return;
-            await supabaseClient.from('lists').insert([{ name, x_position: 50, y_position: 50, width: 250 }]);
+            await supabaseClient.from('lists').insert([{ name, x_position: 0, y_position: 0, width: 300 }]);
             document.getElementById('newListInput').value = ""; loadData();
-        };
-
-        async function handleDeleteList(id) {
-            if (confirm("Delete this entire list?")) {
-                await supabaseClient.from('tasks').delete().eq('list_id', id);
-                await supabaseClient.from('lists').delete().eq('id', id);
-                loadData();
-            }
         }
 
-        async function handleAddTask(listId, e) {
+        function renderTasks() {
+            const area = document.getElementById('listsArea');
+            area.innerHTML = lists.map(l => {
+                const listTasks = tasks.filter(t => t.list_id === l.id);
+                return `
+                <div class="list-container">
+                    <div class="list-header" style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                        <span style="font-weight:bold; font-size:14px;">${l.name}</span>
+                        <button class="icon-btn" onclick="handleDeleteList(${l.id})"><img src="x-button.png" class="ui-icon" onerror="this.replaceWith('✕')"></button>
+                    </div>
+                    <input type="text" placeholder="+ Add task" onkeypress="handleTaskInput(${l.id}, event)" style="width:100%; background:rgba(0,0,0,0.2); border:none; padding:10px; border-radius:8px; color:white; margin-bottom:10px; font-family:inherit;">
+                    ${listTasks.map(t => `
+                        <div class="task-main" style="margin-bottom:12px;">
+                            <div class="task-content-wrapper">
+                                <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="toggleTask(${t.id}, ${t.completed})"></div>
+                                <span style="${t.completed ? 'text-decoration:line-through; opacity:0.5' : ''}">${t.text}</span>
+                            </div>
+                            <button class="icon-btn" onclick="handleReminder(${t.id})"><img src="alarm-button.png" class="ui-icon" onerror="this.replaceWith('⏱')"></button>
+                        </div>`).join('')}
+                </div>`;
+            }).join('');
+        }
+
+        async function handleTaskInput(listId, e) {
             if (e.key === 'Enter' && e.target.value) {
                 await supabaseClient.from('tasks').insert([{ list_id: listId, text: e.target.value }]);
                 e.target.value = ""; loadData();
             }
         }
 
-        async function handleToggleTask(id, status) { await supabaseClient.from('tasks').update({ completed: !status }).eq('id', id); loadData(); }
-        async function handleAddSubtask(id) {
-            const text = prompt("New subtask:"); if (!text) return;
-            const task = tasks.find(t => t.id === id);
-            const updated = [...(task.subtasks || []), { id: Date.now(), text, completed: false }];
-            await supabaseClient.from('tasks').update({ subtasks: updated }).eq('id', id); loadData();
-        }
-        async function handleSetReminder(id) {
-            const time = prompt("Reminder (YYYY-MM-DD HH:MM)", "2025-12-25 10:00");
-            if (time) { await supabaseClient.from('tasks').update({ due_at: new Date(time).toISOString() }).eq('id', id); loadData(); }
+        async function toggleTask(id, status) { await supabaseClient.from('tasks').update({ completed: !status }).eq('id', id); loadData(); }
+
+        // --- NOTES & FOLDERS LOGIC ---
+        async function loadNotes() {
+            const { data: notes } = await supabaseClient.from('notes').select('*, folders(name)').order('updated_at', { ascending: false });
+            allNotes = notes || [];
+            renderNotes(allNotes);
         }
 
-        // --- RENDER ---
-        function render() {
-            const area = document.getElementById('listsArea');
-            area.innerHTML = lists.map(l => {
-                const listTasks = tasks.filter(t => t.list_id === l.id);
-                return `
-                <div class="list-container" id="list-${l.id}" style="left:${l.x_position || 50}px; top:${l.y_position || 50}px; width:${l.width || 250}px">
-                    <div class="list-header">
-                        <span class="list-title">${l.name}</span>
-                        <button class="icon-btn" onclick="handleDeleteList(${l.id})">
-                            <img src="x-button.png" class="ui-icon" onerror="this.replaceWith('✕')" alt="X">
-                        </button>
-                    </div>
-                    <input type="text" class="task-input" placeholder="+ Add task" onkeypress="handleAddTask(${l.id}, event)">
-                    ${listTasks.map(t => `
-                        <div class="task ${t.completed ? 'completed' : ''}">
-                            <div class="task-main">
-                                <div class="task-content-wrapper">
-                                    <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="handleToggleTask(${t.id}, ${t.completed})"></div>
-                                    <span class="task-text">${t.text}</span>
-                                </div>
-                                <div class="task-actions">
-                                    <button class="icon-btn" onclick="handleAddSubtask(${t.id})">
-                                        <img src="plus-button.png" class="ui-icon" onerror="this.replaceWith('+')" alt="+">
-                                    </button>
-                                    <button class="icon-btn" onclick="handleSetReminder(${t.id})">
-                                        <img src="alarm-button.png" class="ui-icon" onerror="this.replaceWith('⏰')" alt="⏰">
-                                    </button>
-                                </div>
-                            </div>
-                        </div>`).join('')}
-                    <div class="resize-handle" onmousedown="startResizing(event, ${l.id})"></div>
-                </div>`;
-            }).join('');
-            makeDraggable();
+        function renderNotes(notesToRender) {
+            const area = document.getElementById('notesArea');
+            const grouped = {};
+            
+            notesToRender.forEach(n => {
+                const fName = n.folders ? n.folders.name : "Uncategorized";
+                if (!grouped[fName]) grouped[fName] = [];
+                grouped[fName].push(n);
+            });
+
+            area.innerHTML = Object.keys(grouped).map(fName => `
+                <div class="folder-group">
+                    <div class="folder-group-title">📂 ${fName}</div>
+                    ${grouped[fName].map(n => `
+                        <div class="note-card" onclick="openNote(${n.id}, '${n.title.replace(/'/g, "\\'")}', '${n.content.replace(/'/g, "\\'")}', ${n.folder_id})">
+                            <strong>${n.title || 'Untitled'}</strong>
+                            <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:4px;">${n.content ? n.content.substring(0, 45).replace(/\n/g, ' ') + '...' : 'Empty note'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
         }
 
-        // --- INTERACTION LOGIC ---
-        function makeDraggable() {
-            document.querySelectorAll('.list-container').forEach(el => {
-                el.onmousedown = (e) => {
-                    if (e.target.tagName === 'INPUT' || e.target.closest('button') || e.target.classList.contains('resize-handle')) return;
-                    
-                    document.querySelectorAll('.list-container').forEach(c => c.style.zIndex = "10");
-                    el.style.zIndex = "100";
+        function filterNotes() {
+            const term = document.getElementById('noteSearch').value.toLowerCase();
+            const filtered = allNotes.filter(n => 
+                (n.title && n.title.toLowerCase().includes(term)) || 
+                (n.content && n.content.toLowerCase().includes(term))
+            );
+            renderNotes(filtered);
+        }
 
-                    let sX = e.clientX - el.offsetLeft, sY = e.clientY - el.offsetTop;
-                    document.onmousemove = (m) => {
-                        el.style.left = (m.pageX - sX) + 'px';
-                        el.style.top = (m.pageY - sY) + 'px';
-                    };
-                    document.onmouseup = async () => {
-                        document.onmousemove = null;
-                        const id = el.id.split('-')[1];
-                        await supabaseClient.from('lists').update({ x_position: parseInt(el.style.left), y_position: parseInt(el.style.top) }).eq('id', id);
-                    };
-                };
+        async function loadFolderOptions() {
+            const { data: folders } = await supabaseClient.from('folders').select('*').order('name');
+            const select = document.getElementById('noteFolderSelect');
+            select.innerHTML = '<option value="">No Folder</option>';
+            folders.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id; opt.textContent = f.name;
+                select.appendChild(opt);
             });
         }
 
-        function startResizing(e, id) {
-            e.preventDefault(); e.stopPropagation();
-            const el = document.getElementById(`list-${id}`), startW = el.offsetWidth, startX = e.clientX;
-            document.onmousemove = (m) => { el.style.width = (startW + m.clientX - startX) + 'px'; };
-            document.onmouseup = async () => {
-                document.onmousemove = null;
-                await supabaseClient.from('lists').update({ width: parseInt(el.style.width) }).eq('id', id);
-            };
+        function openNote(id, title, content, folderId) {
+            currentNoteId = id;
+            loadFolderOptions().then(() => {
+                document.getElementById('notesList').style.display = 'none';
+                document.getElementById('editorArea').style.display = 'block';
+                document.getElementById('noteTitle').value = title;
+                document.getElementById('noteText').value = content;
+                document.getElementById('noteFolderSelect').value = folderId || "";
+            });
+        }
+
+        function closeEditor() {
+            document.getElementById('notesList').style.display = 'block';
+            document.getElementById('editorArea').style.display = 'none';
+            loadNotes();
+        }
+
+        // AUTO-SAVE logic
+        function autoSave() {
+            document.getElementById('saveStatus').innerText = "Saving...";
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(async () => {
+                const title = document.getElementById('noteTitle').value;
+                const content = document.getElementById('noteText').value;
+                const folder_id = document.getElementById('noteFolderSelect').value || null;
+                await supabaseClient.from('notes').update({ title, content, folder_id, updated_at: new Date() }).eq('id', currentNoteId);
+                document.getElementById('saveStatus').innerText = "Saved";
+            }, 1000);
+        }
+
+        async function createNewNote() {
+            const { data } = await supabaseClient.from('notes').insert([{ title: 'New Note', content: '' }]).select();
+            if(data) openNote(data[0].id, data[0].title, data[0].content, null);
+        }
+
+        async function createNewFolder() {
+            const name = prompt("New Folder Name:");
+            if (name) {
+                await supabaseClient.from('folders').insert([{ name }]);
+                loadNotes();
+            }
+        }
+
+        async function deleteCurrentNote() {
+            if (confirm("Permanently delete this note?")) {
+                await supabaseClient.from('notes').delete().eq('id', currentNoteId);
+                closeEditor();
+            }
         }
 
         loadData();
     </script>
 </body>
-</html>
+</html
