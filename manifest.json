@@ -1,0 +1,11 @@
+{
+  "name": "Dakboard Sync App",
+  "short_name": "TaskSync",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#bbfce2",
+  "icons": [
+    { "src": "plus-button.png", "sizes": "192x192", "type": "image/png" }
+  ]
+}
