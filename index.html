@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SyncPro PWA</title>
+    <title>SyncPro Pro</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,7 +21,6 @@
             font-family: 'Comfortaa', cursive; color: white; padding-bottom: 90px; min-height: 100vh;
         }
 
-        /* Glass UI Styles */
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); z-index: 3000; }
         .nav-btn { background: none; border: none; color: white; opacity: 0.5; font-family: inherit; font-size: 13px; cursor: pointer; }
         .nav-btn.active { opacity: 1; font-weight: bold; color: var(--accent-color); }
@@ -34,11 +33,11 @@
         .primary-btn { background: var(--accent-color); padding: 14px; border-radius: 8px; border: none; font-weight: bold; color: #1a1a1a; font-family: inherit; width: 100%; cursor: pointer; text-align: center; }
         .input-style { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 8px; font-family: inherit; outline: none; margin-bottom: 15px; font-size: 16px; }
 
-        #editorArea { background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 5000; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
-        .card-thumb { width: 100%; height: 100px; object-fit: cover; border-radius: 8px 8px 0 0; }
         .checkbox { width: 22px; height: 22px; border: 2px solid white; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
         .checkbox.checked { background: var(--accent-color); border-color: var(--accent-color); position: relative; }
         .checkbox.checked::after { content: '✓'; color: #1a1a1a; font-size: 14px; position: absolute; top: -1px; left: 4px; }
+        
+        #editorArea { background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(30px); position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 5000; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
     </style>
 </head>
 <body>
@@ -59,22 +58,14 @@
             </div>
             <div id="notesArea"></div>
         </div>
-
         <div id="editorArea" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <button onclick="closeEditor()" style="color:var(--accent-color); background:none; border:none; font-size:16px; font-weight:bold;">← Done</button>
-                <span id="saveStatus" style="font-size:11px; color:rgba(255,255,255,0.4);">Saved</span>
-                <button onclick="deleteCurrentNote()" style="color:#ff5f56; background:none; border:none;">Delete</button>
-            </div>
-            
-            <div style="margin-top:20px;">
-                <label for="imageUpload" class="primary-btn" style="display:block; background:rgba(255,255,255,0.1); color:white;">📷 Upload Cover Photo</label>
+             <button onclick="closeEditor()" style="color:var(--accent-color); background:none; border:none; font-size:16px; font-weight:bold; margin-bottom: 20px;">← Done</button>
+             <div style="margin-top:10px;">
+                <label for="imageUpload" class="primary-btn" style="display:block; background:rgba(255,255,255,0.1); color:white;">📷 Upload Cover</label>
                 <input type="file" id="imageUpload" accept="image/*" style="display:none;" onchange="uploadCoverImage(event)">
             </div>
             <img id="coverPreview" style="width:100%; max-height:180px; object-fit:cover; border-radius:12px; margin-top:15px; display:none;">
-
-            <input type="text" id="noteTitle" oninput="autoSave()" style="width:100%; background:none; border:none; color:white; font-size:26px; font-weight:bold; outline:none; margin: 20px 0;" placeholder="Title">
-            <select id="noteFolderSelect" onchange="autoSave()" class="input-style"><option value="">No Folder</option></select>
+            <input type="text" id="noteTitle" oninput="autoSave()" style="width:100%; background:none; border:none; color:white; font-size:26px; font-weight:bold; margin: 20px 0;" placeholder="Title">
             <div id="quillEditor"></div>
         </div>
     </div>
@@ -85,42 +76,46 @@
     </nav>
 
     <script>
+        // Make sure these match your Supabase Dashboard EXACTLY
         const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
         const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
         const supabaseClient = window.supabase.createClient(S_URL, S_KEY);
 
-        let lists = [], tasks = [], allNotes = [], currentNoteId = null, saveTimer;
+        let lists = [], tasks = [], allNotes = [], currentNoteId = null;
 
-        var quill = new Quill('#quillEditor', { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline'], ['image', 'link'], [{ 'list': 'ordered'}, { 'list': 'bullet' }]] } });
-        quill.on('text-change', () => autoSave());
-
-        // --- NAVIGATION ---
-        function switchView(v, b) {
-            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(nb => nb.classList.remove('active'));
-            document.getElementById(v + 'View').classList.add('active');
-            b.classList.add('active');
-            if(v === 'notes') loadNotes(); else if(v === 'tasks') loadData();
-        }
-
-        // --- LISTS & TASKS LOGIC (FIXED) ---
+        // --- CORE FETCHING LOGIC ---
         async function loadData() {
-            console.log("Loading Lists...");
-            const { data: lData } = await supabaseClient.from('lists').select('*').order('id');
-            const { data: tData } = await supabaseClient.from('tasks').select('*').order('position');
-            lists = lData || [];
-            tasks = tData || [];
-            renderTasks();
+            const listsArea = document.getElementById('listsArea');
+            listsArea.innerHTML = "<p style='text-align:center; opacity:0.5;'>Loading lists...</p>";
+
+            try {
+                const { data: lData, error: lError } = await supabaseClient.from('lists').select('*').order('id');
+                const { data: tData, error: tError } = await supabaseClient.from('tasks').select('*').order('position');
+
+                if (lError || tError) throw (lError || tError);
+
+                lists = lData || [];
+                tasks = tData || [];
+                
+                renderTasks();
+            } catch (err) {
+                listsArea.innerHTML = `<p style='color:#ff5f56; text-align:center;'>Error: ${err.message}</p>`;
+            }
         }
 
         function renderTasks() {
             const area = document.getElementById('listsArea');
+            if (lists.length === 0) {
+                area.innerHTML = "<p style='text-align:center; opacity:0.3; margin-top:40px;'>No lists yet. Create one above!</p>";
+                return;
+            }
+
             area.innerHTML = lists.map(l => {
                 const listTasks = tasks.filter(t => t.list_id === l.id);
                 return `
                 <div class="list-container">
                     <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                        <span style="font-weight:bold;">${l.name}</span>
+                        <span style="font-weight:bold; font-size:18px;">${l.name}</span>
                         <button style="background:none; border:none; color:#ff5f56;" onclick="handleDeleteList(${l.id})">✕</button>
                     </div>
                     <input type="text" placeholder="+ Add task" onkeypress="handleTaskInput(${l.id}, event)" class="input-style" style="margin-bottom:10px; font-size:14px; padding:10px;">
@@ -133,8 +128,49 @@
             }).join('');
         }
 
+        // --- ACTIONS ---
         async function handleAddList() {
             const input = document.getElementById('newListInput');
             const name = input.value.trim();
             if (!name) return;
-            await supabaseClient.from('lists').insert([{ name
+            await supabaseClient.from('lists').insert([{ name, x_position: 0, y_position: 0, width: 300 }]);
+            input.value = ""; 
+            await loadData();
+        }
+
+        async function handleTaskInput(id, e) {
+            if (e.key === 'Enter' && e.target.value) {
+                await supabaseClient.from('tasks').insert([{ list_id: id, text: e.target.value }]);
+                e.target.value = ""; 
+                await loadData();
+            }
+        }
+
+        async function toggleTask(id, s) { 
+            await supabaseClient.from('tasks').update({ completed: !s }).eq('id', id); 
+            await loadData(); 
+        }
+
+        async function handleDeleteList(id) { 
+            if(confirm("Delete this list?")) {
+                await supabaseClient.from('lists').delete().eq('id', id); 
+                await loadData(); 
+            }
+        }
+
+        function switchView(v, b) {
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(nb => nb.classList.remove('active'));
+            document.getElementById(v + 'View').classList.add('active');
+            b.classList.add('active');
+            if(v === 'tasks') loadData();
+            if(v === 'notes') loadNotes();
+        }
+
+        // --- STARTUP ---
+        window.onload = loadData;
+
+        // Note: Include your existing Note logic (loadNotes, openNoteById, etc.) here if needed.
+    </script>
+</body>
+</html>
