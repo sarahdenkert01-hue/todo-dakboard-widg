@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SyncPro Master</title>
+    <title>SyncPro Unified</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,28 +21,24 @@
             font-family: 'Comfortaa', cursive; color: white; padding-bottom: 90px; min-height: 100vh;
         }
 
-        /* Nav Bar */
+        /* Nav & Panels */
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); z-index: 3000; }
         .nav-btn { background: none; border: none; color: white; opacity: 0.5; font-family: inherit; font-size: 13px; cursor: pointer; }
         .nav-btn.active { opacity: 1; font-weight: bold; color: var(--accent-color); }
-        
-        /* Views */
         .view-panel { display: none; padding: 20px; animation: fadeIn 0.2s ease; }
         .view-panel.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* UI Cards */
+        /* Containers */
         .list-container, .note-card, .settings-box { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
-        .primary-btn { background: var(--accent-color); padding: 14px; border-radius: 8px; border: none; font-weight: bold; color: #1a1a1a; font-family: inherit; width: 100%; cursor: pointer; }
+        .primary-btn { background: var(--accent-color); padding: 14px; border-radius: 8px; border: none; font-weight: bold; color: #1a1a1a; font-family: inherit; width: 100%; cursor: pointer; text-align: center; }
         .input-style { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 8px; font-family: inherit; outline: none; margin-bottom: 15px; font-size: 16px; }
 
-        /* Checkbox */
+        /* Tasks */
         .checkbox { width: 22px; height: 22px; border: 2px solid white; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
         .checkbox.checked { background: var(--accent-color); border-color: var(--accent-color); position: relative; }
         .checkbox.checked::after { content: '✓'; color: #1a1a1a; font-size: 14px; position: absolute; top: -1px; left: 4px; }
         
-        /* Notes & Editor */
-        .card-thumb { width: 100%; height: 100px; object-fit: cover; border-radius: 8px 8px 0 0; margin-bottom: 10px; }
         #editorArea { background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(30px); position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 5000; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
     </style>
 </head>
@@ -64,20 +60,12 @@
             </div>
             <div id="notesArea"></div>
         </div>
-
         <div id="editorArea" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <button onclick="closeEditor()" style="color:var(--accent-color); background:none; border:none; font-size:16px; font-weight:bold;">← Done</button>
-                <span id="saveStatus" style="font-size:11px; opacity:0.5;">Saved</span>
-                <button onclick="deleteCurrentNote()" style="color:#ff5f56; background:none; border:none;">Delete</button>
-            </div>
-            
+            <button onclick="closeEditor()" style="color:var(--accent-color); background:none; border:none; font-size:16px; font-weight:bold; margin-bottom:20px;">← Done</button>
             <label for="imageUpload" class="primary-btn" style="display:block; background:rgba(255,255,255,0.1); color:white; margin-bottom:15px;">📷 Upload Cover Image</label>
             <input type="file" id="imageUpload" accept="image/*" style="display:none;" onchange="uploadCoverImage(event)">
-            
             <img id="coverPreview" style="width:100%; max-height:180px; object-fit:cover; border-radius:12px; display:none; margin-bottom:15px;">
-            <input type="text" id="noteTitle" oninput="autoSave()" style="width:100%; background:none; border:none; color:white; font-size:26px; font-weight:bold; margin-bottom:15px; outline:none;" placeholder="Note Title">
-            <select id="noteFolderSelect" onchange="autoSave()" class="input-style"><option value="">No Folder</option></select>
+            <input type="text" id="noteTitle" oninput="autoSave()" style="width:100%; background:none; border:none; color:white; font-size:26px; font-weight:bold; outline:none; margin-bottom:15px;" placeholder="Title">
             <div id="quillEditor" style="height: 400px; color: white;"></div>
         </div>
     </div>
@@ -94,188 +82,115 @@
 
         let lists = [], tasks = [], allNotes = [], currentNoteId = null, saveTimer;
 
-        // Init Quill
-        const quill = new Quill('#quillEditor', {
-            theme: 'snow',
-            modules: { toolbar: [['bold', 'italic', 'underline'], ['link'], [{ 'list': 'ordered'}, { 'list': 'bullet' }]] }
-        });
+        const quill = new Quill('#quillEditor', { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline'], ['link'], [{ 'list': 'ordered'}, { 'list': 'bullet' }]] } });
         quill.on('text-change', () => autoSave());
 
-        // --- NAVIGATION ---
-        function switchView(view, btn) {
+        function switchView(v, b) {
             document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(nb => nb.classList.remove('active'));
-            document.getElementById(view + 'View').classList.add('active');
-            btn.classList.add('active');
-            if(view === 'tasks') loadTasksData();
-            if(view === 'notes') loadNotesData();
+            document.getElementById(v + 'View').classList.add('active');
+            b.classList.add('active');
+            if(v === 'tasks') loadTasksData();
+            if(v === 'notes') loadNotesData();
         }
 
-        // --- LISTS LOGIC ---
+        // --- RESTORED TASK & SUBTASK LOGIC ---
         async function loadTasksData() {
             const { data: lData } = await supabaseClient.from('lists').select('*').order('id');
-            const { data: tData } = await supabaseClient.from('tasks').select('*').order('position');
-            lists = lData || [];
-            tasks = tData || [];
+            const { data: tData } = await supabaseClient.from('tasks').select('*').order('id');
+            lists = lData || []; tasks = tData || [];
             renderLists();
         }
 
-        // --- 1. SET YOUR GITHUB PATH HERE ---
-// Replace 'username' and 'repo' with your actual GitHub details
-const GITHUB_BASE = "https://raw.githubusercontent.com/sarahdenkert01-hue/todo-dakboard-widg/main/";
+        function renderLists() {
+            const area = document.getElementById('listsArea');
+            area.innerHTML = lists.map(l => {
+                const listTasks = tasks.filter(t => t.list_id === l.id);
+                const mainTasks = listTasks.filter(t => !t.parent_id);
 
-// --- 2. THE UPDATED RENDER FUNCTION ---
-function renderLists() {
-    const area = document.getElementById('listsArea');
-    if (!area) return;
-
-    area.innerHTML = lists.map(l => {
-        const listTasks = tasks.filter(t => t.list_id === l.id);
-        const mainTasks = listTasks.filter(t => !t.parent_id);
-
-        return `
-        <div class="list-container">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <span style="font-weight:bold; font-size:18px; color:var(--accent-color);"># ${l.name}</span>
-                <button style="background:none; border:none;" onclick="deleteList(${l.id})">
-                    <img src="${GITHUB_BASE}delete.png" style="width:18px; opacity:0.6;">
-                </button>
-            </div>
-            
-            <input type="text" placeholder="＋ Add a task..." onkeypress="addTask(${l.id}, event)" class="input-style">
-            
-            ${mainTasks.map(t => {
-                const subs = listTasks.filter(st => st.parent_id === t.id);
                 return `
-                <div style="margin-bottom:14px;">
-                    <div style="display:flex; align-items:flex-start; gap:12px;">
-                        <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="toggleTask(${t.id}, ${t.completed})"></div>
-                        <div style="flex:1;">
-                            <div style="${t.completed ? 'opacity:0.4; text-decoration:line-through' : ''}; font-size:15px;">${t.text}</div>
-                            ${t.reminder_at ? `<div style="font-size:11px; color:var(--accent-color); margin-top:4px;">
-                                <img src="${GITHUB_BASE}clock.svg" style="width:10px; vertical-align:middle; margin-right:4px;"> 
-                                ${new Date(t.reminder_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
-                            </div>` : ''}
-                        </div>
-                        <div style="display:flex; gap:12px;">
-                            <img src="${GITHUB_BASE}reminder.svg" onclick="setReminder(${t.id})" style="width:18px; cursor:pointer; opacity:0.5;">
-                            <img src="${GITHUB_BASE}add.svg" onclick="addSubtask(${l.id}, ${t.id})" style="width:18px; cursor:pointer; opacity:0.5;">
-                        </div>
+                <div class="list-container">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                        <span style="font-weight:bold; font-size:18px;">${l.name}</span>
+                        <button style="background:none; border:none; color:#ff5f56;" onclick="deleteList(${l.id})">✕</button>
                     </div>
-
-                    <div style="margin-left:35px; margin-top:8px;">
-                        ${subs.map(st => `
-                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                                <img src="${GITHUB_BASE}branch.svg" style="width:12px; opacity:0.3;">
-                                <div class="checkbox ${st.completed ? 'checked' : ''}" style="width:16px; height:16px;" onclick="toggleTask(${st.id}, ${st.completed})"></div>
-                                <span style="font-size:13px; ${st.completed ? 'opacity:0.4; text-decoration:line-through' : ''}">${st.text}</span>
+                    <input type="text" placeholder="+ Add task" onkeypress="addTask(${l.id}, event)" class="input-style" style="margin-bottom:15px; font-size:14px; padding:10px;">
+                    ${mainTasks.map(t => {
+                        const subs = listTasks.filter(st => st.parent_id === t.id);
+                        return `
+                        <div style="margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="toggleTask(${t.id}, ${t.completed})"></div>
+                                <div style="flex:1;">
+                                    <span style="${t.completed ? 'opacity:0.5; text-decoration:line-through' : ''}">${t.text}</span>
+                                    ${t.reminder_at ? `<div style="font-size:10px; color:var(--accent-color);">❕ ${new Date(t.reminder_at).toLocaleString()}</div>` : ''}
+                                </div>
+                                <button onclick="setReminder(${t.id})" style="background:none; border:none; color:white; opacity:0.3; font-size:12px;">⏰</button>
+                                <button onclick="addSubtask(${l.id}, ${t.id})" style="background:none; border:none; color:white; opacity:0.3; font-size:12px;">+</button>
                             </div>
-                        `).join('')}
-                    </div>
+                            <div style="margin-left:32px; margin-top:8px; border-left:1px solid rgba(255,255,255,0.1); padding-left:10px;">
+                                ${subs.map(st => `
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                                        <div class="checkbox ${st.completed ? 'checked' : ''}" style="width:16px; height:16px;" onclick="toggleTask(${st.id}, ${st.completed})"></div>
+                                        <span style="font-size:13px; ${st.completed ? 'opacity:0.5; text-decoration:line-through' : ''}">${st.text}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                    }).join('')}
                 </div>`;
-            }).join('')}
-        </div>`;
-    }).join('');
-}
+            }).join('');
         }
 
-        async function handleAddList() {
-            const name = document.getElementById('newListInput').value;
-            if(!name) return;
-            await supabaseClient.from('lists').insert([{ name }]);
-            document.getElementById('newListInput').value = "";
-            loadTasksData();
-        }
-
-        async function addTask(listId, e) {
-            if(e.key === 'Enter' && e.target.value) {
-                await supabaseClient.from('tasks').insert([{ list_id: listId, text: e.target.value }]);
-                e.target.value = "";
-                loadTasksData();
-            }
-        }
-
+        async function addTask(listId, e) { if(e.key === 'Enter' && e.target.value) { await supabaseClient.from('tasks').insert([{ list_id: listId, text: e.target.value }]); e.target.value = ""; loadTasksData(); } }
+        async function addSubtask(listId, pId) { const t = prompt("Subtask:"); if(t) { await supabaseClient.from('tasks').insert([{ list_id: listId, text: t, parent_id: pId }]); loadTasksData(); } }
+        async function setReminder(id) { const d = prompt("Reminder (YYYY-MM-DD HH:MM):"); if(d) { await supabaseClient.from('tasks').update({ reminder_at: new Date(d).toISOString() }).eq('id', id); loadTasksData(); } }
         async function toggleTask(id, s) { await supabaseClient.from('tasks').update({ completed: !s }).eq('id', id); loadTasksData(); }
-        async function deleteList(id) { if(confirm("Delete list?")) { await supabaseClient.from('lists').delete().eq('id', id); loadTasksData(); } }
+        async function handleAddList() { const n = document.getElementById('newListInput').value; if(n) { await supabaseClient.from('lists').insert([{ name: n }]); document.getElementById('newListInput').value = ""; loadTasksData(); } }
+        async function deleteList(id) { if(confirm("Delete?")) { await supabaseClient.from('lists').delete().eq('id', id); loadTasksData(); } }
 
         // --- NOTES LOGIC ---
-        
         async function loadNotesData() {
             const { data } = await supabaseClient.from('notes').select('*, folders(name)').order('updated_at', { ascending: false });
             allNotes = data || [];
-            renderNotes();
-        }
-
-        function renderNotes() {
-            const area = document.getElementById('notesArea');
-            area.innerHTML = allNotes.map(n => `
+            document.getElementById('notesArea').innerHTML = allNotes.map(n => `
                 <div class="note-card" onclick="openNote(${n.id})">
                     ${n.cover_image ? `<img src="${n.cover_image}" class="card-thumb">` : ''}
                     <div style="padding:10px;"><strong>${n.title || 'Untitled'}</strong></div>
                 </div>`).join('');
         }
 
-        async function createNewNote() {
-            const { data, error } = await supabaseClient.from('notes').insert([{ title: 'New Note', content: '' }]).select();
-            if (error) { alert("Error adding note: " + error.message); return; }
-            await loadNotesData();
-            if (data) openNote(data[0].id);
-        }
-
         async function openNote(id) {
             const note = allNotes.find(n => n.id === id);
-            if(!note) return;
             currentNoteId = id;
             document.getElementById('notesList').style.display = 'none';
             document.getElementById('editorArea').style.display = 'block';
             document.getElementById('noteTitle').value = note.title || "";
             quill.root.innerHTML = note.content || "";
-            const preview = document.getElementById('coverPreview');
-            if (note.cover_image) { preview.src = note.cover_image; preview.style.display = 'block'; }
-            else { preview.style.display = 'none'; }
-            loadFolderOptions(note.folder_id);
+            const p = document.getElementById('coverPreview');
+            if(note.cover_image) { p.src = note.cover_image; p.style.display = 'block'; } else { p.style.display = 'none'; }
         }
 
         function autoSave() {
             clearTimeout(saveTimer);
             saveTimer = setTimeout(async () => {
-                document.getElementById('saveStatus').innerText = "Saving...";
-                await supabaseClient.from('notes').update({ 
-                    title: document.getElementById('noteTitle').value, 
-                    content: quill.root.innerHTML, 
-                    folder_id: document.getElementById('noteFolderSelect').value || null,
-                    updated_at: new Date() 
-                }).eq('id', currentNoteId);
-                document.getElementById('saveStatus').innerText = "Saved";
+                await supabaseClient.from('notes').update({ title: document.getElementById('noteTitle').value, content: quill.root.innerHTML, updated_at: new Date() }).eq('id', currentNoteId);
             }, 1000);
         }
 
-        async function uploadCoverImage(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const fileName = `${Date.now()}_${file.name}`;
-            const { data, error } = await supabaseClient.storage.from('note-covers').upload(fileName, file);
-            if (error) { alert("Upload failed: " + error.message); return; }
-            const { data: { publicUrl } } = supabaseClient.storage.from('note-covers').getPublicUrl(fileName);
+        async function uploadCoverImage(e) {
+            const f = e.target.files[0]; if(!f) return;
+            const name = `${Date.now()}_${f.name}`;
+            await supabaseClient.storage.from('note-covers').upload(name, f);
+            const { data: { publicUrl } } = supabaseClient.storage.from('note-covers').getPublicUrl(name);
             document.getElementById('coverPreview').src = publicUrl;
             document.getElementById('coverPreview').style.display = 'block';
             await supabaseClient.from('notes').update({ cover_image: publicUrl }).eq('id', currentNoteId);
         }
 
+        window.onload = loadTasksData;
         function closeEditor() { document.getElementById('notesList').style.display = 'block'; document.getElementById('editorArea').style.display = 'none'; loadNotesData(); }
-        async function deleteCurrentNote() { if(confirm("Delete note?")) { await supabaseClient.from('notes').delete().eq('id', currentNoteId); closeEditor(); } }
-        async function createNewFolder() { const n = prompt("Folder Name:"); if(n) { await supabaseClient.from('folders').insert([{ name: n }]); loadNotesData(); } }
-        async function loadFolderOptions(selectedId) {
-            const { data } = await supabaseClient.from('folders').select('*');
-            const sel = document.getElementById('noteFolderSelect');
-            sel.innerHTML = '<option value="">No Folder</option>';
-            data.forEach(f => sel.innerHTML += `<option value="${f.id}" ${f.id == selectedId ? 'selected' : ''}>${f.name}</option>`);
-        }
-
-        // --- STARTUP ---
-        window.onload = () => {
-            loadTasksData(); // Load lists by default
-        };
+        async function createNewNote() { await supabaseClient.from('notes').insert([{ title: 'New Note' }]); loadNotesData(); }
     </script>
 </body>
-</html
+</html>
