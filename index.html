@@ -112,7 +112,7 @@
                 <div class="list-container">
                     <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
                         <span style="font-weight:bold; font-size:18px;">${l.name}</span>
-                        <button style="background:none; border:none; color:#ff5f56;" onclick="deleteList(${l.id})">✕</button>
+                        <button style="background:none; border:none; color:##ffffff;" onclick="deleteList(${l.id})">✕</button>
                     </div>
                     <input type="text" placeholder="+ Add task" onkeypress="addTask(${l.id}, event)" class="input-style" style="margin-bottom:15px; font-size:14px; padding:10px;">
                     ${mainTasks.map(t => {
@@ -123,10 +123,10 @@
                                 <div class="checkbox ${t.completed ? 'checked' : ''}" onclick="toggleTask(${t.id}, ${t.completed})"></div>
                                 <div style="flex:1;">
                                     <span style="${t.completed ? 'opacity:0.5; text-decoration:line-through' : ''}">${t.text}</span>
-                                    ${t.reminder_at ? `<div style="font-size:10px; color:var(--accent-color);">❕ ${new Date(t.reminder_at).toLocaleString()}</div>` : ''}
+                                    ${t.reminder_at ? `<div style="font-size:10px; color:var(--accent-color);">❕${new Date(t.reminder_at).toLocaleString()}</div>` : ''}
                                 </div>
-                                <button onclick="setReminder(${t.id})" style="background:none; border:none; color:white; opacity:0.3; font-size:12px;">⏰</button>
-                                <button onclick="addSubtask(${l.id}, ${t.id})" style="background:none; border:none; color:white; opacity:0.3; font-size:12px;">+</button>
+                                <button onclick="setReminder(${t.id})" style="background:none; border:none; color:white; opacity:0.3; font-size:12px;">❕</button>
+                                <button onclick="addSubtask(${l.id}, ${t.id})" style="background:none; border:none; color:white; opacity:0.3; font-size:12px;">🔘</button>
                             </div>
                             <div style="margin-left:32px; margin-top:8px; border-left:1px solid rgba(255,255,255,0.1); padding-left:10px;">
                                 ${subs.map(st => `
