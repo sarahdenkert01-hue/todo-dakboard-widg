@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncPro Dakboard</title>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --accent-color: #bbfce2; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body { 
+            background: transparent; /* Transparent for Dakboard overlay */
+            font-family: 'Comfortaa', cursive; 
+            color: white; 
+            min-height: 100vh;
+            overflow: hidden; /* Prevents scrollbars on dashboard */
+        }
+
+        /* Draggable & Resizable Glass Container */
+        .list-container { 
+            position: absolute;
+            background: rgba(0, 0, 0, 0.25); 
+            backdrop-filter: blur(15px); 
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 12px; 
+            padding: 18px;
+            min-width: 200px;
+            min-height: 100px;
+            touch-action: none;
+            user-select: none;
+            transition: border-color 0.2s;
+        }
+
+        .list-container:hover { border-color: var(--accent-color); }
+
+        .list-header {
+            cursor: move;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--accent-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .task-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            border: 1.5px solid white;
+            border-radius: 50%;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .checkbox.checked {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        /* Resize Handle */
+        .resize-handle {
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 15px;
+            height: 15px;
+            cursor: nwse-resize;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="dashboardArea"></div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const S_URL = 'https://gzjakgmvxvkznoeupnat.supabase.co';
+        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6amFrZ212eHZrem5vZXVwbmF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMzgxNTgsImV4cCI6MjA4MTYxNDE1OH0.qQGTrXgYWMdqP5NK6zdx75pNqYtb2H7vaQnKpZAvFvI';
+        const GITHUB_BASE = "https://raw.githubusercontent.com/sarahdenkert01-hue/todo-dakboard-widge/main/";
+        const supabaseClient = window.supabase.createClient(S_URL, S_KEY);
+
+        let lists = [], tasks = [];
+
+        async function loadData() {
+            const { data: lData } = await supabaseClient.from('lists').select('*');
+            const { data: tData } = await supabaseClient.from('tasks').select('*');
+            lists = lData || [];
+            tasks = tData || [];
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const area = document.getElementById('dashboardArea');
+            area.innerHTML = lists.map(l => {
+                const listTasks = tasks.filter(t => t.list_id === l.id);
+                // Use stored database values for position and width
+                const x = l.x_position || 20; 
+                const y = l.y_position || 20;
+                const w = l.width || 280;
+
+                return `
+                <div class="list-container" 
+                     id="list-${l.id}" 
+                     style="transform: translate(${x}px, ${y}px); width: ${w}px;"
+                     data-x="${x}" data-y="${y}">
+                    
+                    <div class="list-header">
+                        <span># ${l.name}</span>
+                        <img src="${GITHUB_BASE}delete.svg" style="width:14px; opacity:0.3;">
+                    </div>
+                    
+                    <div class="task-list">
+                        ${listTasks.map(t => {
+                            if (t.parent_id) return ''; // Hide subtasks in dashboard view for cleanliness
+                            return `
+                            <div class="task-row">
+                                <div class="checkbox ${t.completed ? 'checked' : ''}"></div>
+                                <div style="flex:1;">
+                                    <span style="${t.completed ? 'opacity:0.4; text-decoration:line-through' : ''}">${t.text}</span>
+                                    ${t.reminder_at ? `<div style="font-size:10px; opacity:0.6;">🕒 ${new Date(t.reminder_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>` : ''}
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    <div class="resize-handle">◢</div>
+                </div>`;
+            }).join('');
+
+            initInteractions();
+        }
+
+        // --- INTERACT JS LOGIC ---
+        
+
+        function initInteractions() {
+            interact('.list-container')
+                .draggable({
+                    allowFrom: '.list-header',
+                    listeners: {
+                        move(event) {
+                            const target = event.target;
+                            const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+                            const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+                            target.style.transform = `translate(${x}px, ${y}px)`;
+                            target.setAttribute('data-x', x);
+                            target.setAttribute('data-y', y);
+                        },
+                        end(event) {
+                            updateSupabase(event.target);
+                        }
+                    }
+                })
+                .resizable({
+                    edges: { right: true, bottom: true },
+                    listeners: {
+                        move(event) {
+                            const target = event.target;
+                            target.style.width = `${event.rect.width}px`;
+                        },
+                        end(event) {
+                            updateSupabase(event.target);
+                        }
+                    }
+                });
+        }
+
+        async function updateSupabase(el) {
+            const listId = el.id.split('-')[1];
+            const x = Math.round(parseFloat(el.getAttribute('data-x')));
+            const y = Math.round(parseFloat(el.getAttribute('data-y')));
+            const w = Math.round(el.offsetWidth);
+
+            await supabaseClient.from('lists').update({ 
+                x_position: x, 
+                y_position: y, 
+                width: w 
+            }).eq('id', listId);
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
